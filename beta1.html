@@ -1,0 +1,2523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heritage Fish Company — Feed Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --lake: #1a3a2a;
+  --deep: #112b1e;
+  --surface: #1f4a35;
+  --mid: #2a5e44;
+  --gold: #c8a84b;
+  --gold-light: #e8c96a;
+  --gold-faint: rgba(200,168,75,0.12);
+  --green: #4caf7d;
+  --green-faint: rgba(76,175,125,0.12);
+  --water: #2d7d9a;
+  --amber: #f0a04b;
+  --coral: #e07060;
+  --cream: #f5ede0;
+  --text: #e8dfc8;
+  --muted: #8aab90;
+  --border: rgba(200,168,75,0.18);
+  --card: rgba(26,58,42,0.9);
+  --radius: 12px;
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--deep);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 100% 60% at 50% 0%,rgba(45,125,154,0.08) 0%,transparent 55%),radial-gradient(ellipse 70% 50% at 10% 100%,rgba(76,175,125,0.06) 0%,transparent 50%),radial-gradient(ellipse 50% 40% at 90% 50%,rgba(200,168,75,0.05) 0%,transparent 50%);pointer-events:none;z-index:0;}
+.wrap{max-width:1300px;margin:0 auto;padding:0 20px;position:relative;z-index:1;}
+
+/* LOADING */
+#loading-overlay{position:fixed;inset:0;background:var(--deep);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity 0.5s;}
+#loading-overlay.hide{opacity:0;pointer-events:none;}
+.loading-logo{font-size:52px;margin-bottom:20px;animation:pulse 1.5s ease-in-out infinite;}
+.loading-text{font-family:var(--serif);font-size:22px;color:var(--gold-light);margin-bottom:8px;}
+.loading-sub{font-size:13px;color:var(--muted);font-family:var(--mono);}
+.loading-dots{display:flex;gap:6px;margin-top:16px;}
+.loading-dots span{width:8px;height:8px;border-radius:50%;background:var(--gold);animation:dot 1.2s ease-in-out infinite;}
+.loading-dots span:nth-child(2){animation-delay:0.2s;}
+.loading-dots span:nth-child(3){animation-delay:0.4s;}
+@keyframes dot{0%,80%,100%{opacity:0.2;transform:scale(0.8);}40%{opacity:1;transform:scale(1.2);}}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+
+/* SYNC BAR */
+.sync-bar{position:fixed;top:0;left:0;right:0;background:rgba(76,175,125,0.15);border-bottom:1px solid rgba(76,175,125,0.3);padding:6px 20px;font-size:12px;font-family:var(--mono);color:var(--green);display:flex;align-items:center;gap:8px;z-index:100;transform:translateY(-100%);transition:transform 0.3s;}
+.sync-bar.show{transform:none;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1s infinite;}
+
+/* HEADER */
+header{border-bottom:1px solid var(--border);padding:0;margin-bottom:28px;position:relative;overflow:hidden;}
+.header-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(44,94,68,0.4) 0%,rgba(17,43,30,0.6) 100%);border-bottom:1px solid var(--border);}
+.header-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:18px 20px;gap:16px;flex-wrap:wrap;}
+.brand{display:flex;align-items:center;gap:16px;}
+.brand-logo{width:54px;height:54px;background:linear-gradient(135deg,var(--gold),#8a6f28);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 20px rgba(200,168,75,0.3);flex-shrink:0;}
+.brand-name{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--gold-light);line-height:1.2;}
+.brand-sub{font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+.header-right{text-align:right;}
+.live-clock{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--gold);letter-spacing:1px;}
+.live-date{font-size:12px;color:var(--muted);margin-top:2px;}
+.lake-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(45,125,154,0.15);border:1px solid rgba(45,125,154,0.3);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;color:var(--water);letter-spacing:1px;margin-top:6px;}
+.db-status{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:1px;margin-top:6px;margin-left:8px;border:1px solid rgba(76,175,125,0.3);background:rgba(76,175,125,0.1);color:var(--green);}
+.db-status.offline{border-color:rgba(224,112,96,0.3);background:rgba(224,112,96,0.1);color:var(--coral);}
+.db-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+/* TABS */
+.nav-tabs{display:flex;gap:2px;margin-bottom:24px;background:rgba(17,43,30,0.8);border:1px solid var(--border);border-radius:var(--radius);padding:4px;width:fit-content;backdrop-filter:blur(8px);}
+.nav-tab{padding:9px 22px;border-radius:9px;cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:600;border:none;background:transparent;color:var(--muted);transition:all 0.2s;white-space:nowrap;}
+.nav-tab.active{background:var(--surface);color:var(--gold);}
+.nav-tab:hover:not(.active){color:var(--gold-light);}
+
+/* PAGES */
+.page{display:none;}
+.page.active{display:block;animation:fadeUp 0.3s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* SECTION TITLE */
+.sec-title{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:20px;backdrop-filter:blur(10px);}
+
+/* CAGE GRID */
+.quick-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.q-label{font-size:11px;font-weight:600;color:var(--muted);}
+.qbtn{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;transition:all 0.15s;}
+.qbtn:hover{border-color:var(--gold);color:var(--gold);}
+.section-group{margin-bottom:20px;}
+.sec-badge-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:5px;display:inline-block;margin-bottom:10px;}
+.sg-A .sec-badge-label{background:rgba(76,175,125,0.15);color:var(--green);}
+.sg-B .sec-badge-label{background:rgba(200,168,75,0.15);color:var(--gold);}
+.sg-C .sec-badge-label{background:rgba(224,112,96,0.15);color:var(--coral);}
+.sg-D .sec-badge-label{background:rgba(45,125,154,0.15);color:var(--water);}
+.cage-row{display:flex;flex-wrap:wrap;gap:10px;}
+.cage-tile{width:90px;background:rgba(17,43,30,0.8);border:2px solid var(--border);border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;transition:all 0.2s;position:relative;overflow:hidden;flex-shrink:0;}
+.cage-tile:hover{transform:translateY(-2px);}
+.sg-A .cage-tile:hover,.sg-A .cage-tile.sel{border-color:var(--green);background:rgba(76,175,125,0.1);}
+.sg-B .cage-tile:hover,.sg-B .cage-tile.sel{border-color:var(--gold);background:rgba(200,168,75,0.1);}
+.sg-C .cage-tile:hover,.sg-C .cage-tile.sel{border-color:var(--coral);background:rgba(224,112,96,0.1);}
+.sg-D .cage-tile:hover,.sg-D .cage-tile.sel{border-color:var(--water);background:rgba(45,125,154,0.1);}
+.cage-id{font-family:var(--serif);font-size:20px;font-weight:700;line-height:1;}
+.sg-A .cage-id{color:var(--green);}
+.sg-B .cage-id{color:var(--gold);}
+.sg-C .cage-id{color:var(--coral);}
+.sg-D .cage-id{color:var(--water);}
+.cage-status{font-size:10px;font-family:var(--mono);color:var(--muted);margin-top:4px;}
+.fed-pip{width:7px;height:7px;border-radius:50%;background:var(--green);position:absolute;top:7px;right:7px;box-shadow:0 0 8px var(--green);}
+.sel-summary{font-size:13px;color:var(--muted);font-family:var(--mono);margin-top:10px;}
+.sel-summary strong{color:var(--gold-light);}
+
+/* FEED TILES */
+.feed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px;margin-bottom:16px;}
+.feed-tile{background:rgba(17,43,30,0.8);border:2px solid var(--border);border-radius:12px;padding:14px;transition:all 0.2s;}
+.feed-tile:hover{border-color:var(--gold);}
+.feed-tile.sel{border-color:var(--gold);background:var(--gold-faint);}
+.ft-brand{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+.ft-brand.growel{color:var(--amber);}
+.ft-brand.optiline{color:var(--green);}
+.ft-size{font-size:22px;font-family:var(--serif);font-weight:700;color:var(--text);margin:3px 0;}
+.ft-kg{font-size:11px;font-family:var(--mono);color:var(--muted);}
+.qty-row{display:flex;align-items:center;gap:8px;margin-top:12px;}
+.qty-btn{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--mid);color:var(--gold);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background 0.15s;font-family:var(--sans);}
+.qty-btn:hover{background:rgba(200,168,75,0.2);}
+.qty-inp{width:44px;text-align:center;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:15px;font-weight:500;outline:none;}
+.qty-lbl{font-size:10px;color:var(--muted);font-family:var(--mono);}
+.total-preview{font-size:11px;color:var(--gold);font-family:var(--mono);margin-top:8px;}
+
+/* FORM */
+.field-label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.field-row{margin-bottom:14px;}
+.field-inp,.field-textarea,.field-select{width:100%;background:rgba(17,43,30,0.8);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-family:var(--sans);font-size:14px;outline:none;transition:border-color 0.2s;}
+.field-inp:focus,.field-textarea:focus,.field-select:focus{border-color:var(--gold);}
+.field-textarea{resize:vertical;min-height:70px;}
+.field-select option{background:var(--deep);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:600px){.form-row{grid-template-columns:1fr;}}
+
+/* BUTTONS */
+.btn-gold{background:linear-gradient(135deg,var(--gold),#8a6f28);color:var(--deep);border:none;border-radius:10px;padding:13px 32px;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;}
+.btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(200,168,75,0.35);}
+.btn-gold:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:10px;padding:11px 20px;font-family:var(--sans);font-size:14px;cursor:pointer;transition:all 0.2s;}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold);}
+.form-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px;}
+.form-err{font-size:13px;color:var(--coral);}
+
+/* LOGS TABLE */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+.flt-sel{background:rgba(17,43,30,0.9);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-family:var(--sans);font-size:13px;outline:none;cursor:pointer;}
+.flt-sel:focus{border-color:var(--gold);}
+.flt-sel option{background:var(--deep);}
+.tbl-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead{background:rgba(17,43,30,0.95);}
+thead th{padding:11px 14px;text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap;}
+tbody tr{border-bottom:1px solid rgba(200,168,75,0.08);transition:background 0.15s;}
+tbody tr:hover{background:var(--gold-faint);}
+tbody tr:last-child{border-bottom:none;}
+tbody td{padding:11px 14px;vertical-align:middle;}
+.tag-growel{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;font-family:var(--mono);background:rgba(240,160,75,0.15);color:var(--amber);}
+.tag-optiline{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;font-family:var(--mono);background:rgba(76,175,125,0.12);color:var(--green);}
+.del-btn{background:transparent;border:1px solid rgba(224,112,96,0.3);color:var(--coral);border-radius:6px;padding:3px 9px;cursor:pointer;font-size:11px;font-family:var(--sans);transition:all 0.15s;}
+.del-btn:hover{background:rgba(224,112,96,0.15);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.stat-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600;}
+.stat-val{font-family:var(--serif);font-size:30px;font-weight:700;line-height:1;}
+.stat-sub{font-size:12px;font-family:var(--mono);color:var(--muted);margin-top:5px;}
+.gold-val{color:var(--gold);}
+.green-val{color:var(--green);}
+.water-val{color:var(--water);}
+.amber-val{color:var(--amber);}
+.bar-row{margin-bottom:16px;}
+.bar-header{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;}
+.bar-track{height:7px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width 0.5s cubic-bezier(.4,0,.2,1);}
+.bar-gold{background:linear-gradient(90deg,var(--gold),var(--gold-light));}
+.bar-green{background:linear-gradient(90deg,var(--green),#7dd4a8);}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty .ico{font-size:48px;margin-bottom:14px;opacity:0.3;}
+.empty p{font-size:14px;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--gold);border-radius:10px;padding:14px 22px;font-size:14px;font-weight:600;color:var(--gold-light);z-index:1000;transform:translateY(80px);opacity:0;transition:all 0.35s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.5);max-width:320px;}
+.toast.show{transform:none;opacity:1;}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:20px 0;}
+
+/* ======== PIN OVERLAY ======== */
+.pin-overlay{position:fixed;inset:0;background:rgba(10,25,18,0.92);backdrop-filter:blur(12px);z-index:9000;display:flex;align-items:center;justify-content:center;}
+.pin-overlay.hidden{display:none;}
+.pin-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:38px 32px;width:320px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.6);}
+.pin-icon{font-size:36px;margin-bottom:12px;}
+.pin-title{font-family:var(--serif);font-size:22px;color:var(--gold-light);margin-bottom:4px;}
+.pin-sub{font-size:12px;color:var(--muted);margin-bottom:26px;}
+.pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:22px;}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all 0.18s;}
+.pin-dot.filled{background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px rgba(200,168,75,0.5);}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px;}
+.pin-key{padding:15px;border-radius:11px;border:1px solid var(--border);background:rgba(17,43,30,0.8);color:var(--text);font-family:var(--serif);font-size:20px;cursor:pointer;transition:all 0.12s;}
+.pin-key:hover{background:var(--gold-faint);border-color:var(--gold);color:var(--gold);}
+.pin-key:active{transform:scale(0.93);}
+.pin-err{font-size:12px;color:var(--coral);min-height:18px;margin-top:2px;}
+.pin-shake{animation:pshake .35s ease;}
+@keyframes pshake{0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-7px);}40%,80%{transform:translateX(7px);}}
+
+/* ======== DOWNLOAD MODAL ======== */
+.dl-overlay{position:fixed;inset:0;background:rgba(10,25,18,0.85);backdrop-filter:blur(8px);z-index:8500;display:flex;align-items:center;justify-content:center;}
+.dl-overlay.hidden{display:none;}
+.dl-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px 28px;width:430px;max-width:94vw;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.dl-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;}
+.dl-title{font-family:var(--serif);font-size:20px;color:var(--gold-light);}
+.dl-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.dl-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0;}
+.dl-close:hover{color:var(--text);}
+.dl-option{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;margin-bottom:9px;transition:border-color 0.15s;background:rgba(17,43,30,0.5);}
+.dl-option:hover{border-color:var(--gold);}
+.dl-option input[type=radio]{accent-color:var(--gold);width:15px;height:15px;flex-shrink:0;margin-top:2px;}
+.dl-opt-title{font-size:13px;font-weight:600;color:var(--text);}
+.dl-opt-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+@media(max-width:640px){
+  .nav-tabs{width:100%;}
+  .nav-tab{flex:1;text-align:center;padding:9px 8px;font-size:11px;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .brand-name{font-size:16px;}
+}
+
+/* ======== MONTHLY REPORT ======== */
+.report-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:22px;}
+.report-controls .field-row{margin-bottom:0;min-width:160px;}
+.report-section{margin-bottom:28px;}
+.report-section-title{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.report-section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.monthly-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
+.rpt-stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.rpt-stat-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-weight:600;}
+.rpt-stat-val{font-family:var(--serif);font-size:26px;font-weight:700;line-height:1;}
+.rpt-stat-sub{font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:4px;}
+.cage-report-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
+.cage-report-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.cage-report-id{font-family:var(--serif);font-size:18px;font-weight:700;margin-bottom:10px;}
+.sg-A .cage-report-id{color:var(--green);}
+.sg-B .cage-report-id{color:var(--gold);}
+.sg-C .cage-report-id{color:var(--coral);}
+.sg-D .cage-report-id{color:var(--water);}
+.cage-feed-line{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.08);}
+.cage-feed-line:last-child{border-bottom:none;}
+.cage-feed-name{color:var(--muted);}
+.cage-feed-val{font-family:var(--mono);font-weight:600;color:var(--text);}
+.cage-total-line{display:flex;justify-content:space-between;font-size:13px;font-weight:700;padding:8px 0 0;margin-top:4px;border-top:1px solid var(--border);}
+.cage-total-line .lbl{color:var(--muted);}
+.cage-total-line .val{font-family:var(--mono);color:var(--gold);}
+.no-data-rpt{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px;}
+.feed-size-matrix{width:100%;border-collapse:collapse;font-size:13px;}
+.feed-size-matrix th{padding:9px 14px;text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700;border-bottom:1px solid var(--border);}
+.feed-size-matrix td{padding:9px 14px;border-bottom:1px solid rgba(200,168,75,0.07);font-family:var(--mono);}
+.feed-size-matrix tr:last-child td{border-bottom:none;}
+.feed-size-matrix tr:hover td{background:var(--gold-faint);}
+.rpt-dl-btn{background:linear-gradient(135deg,var(--gold),#8a6f28);color:var(--deep);border:none;border-radius:10px;padding:11px 26px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;}
+.rpt-dl-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(200,168,75,0.35);}
+.rpt-dl-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+
+/* ======== FEED USAGE SUMMARY ======== */
+.fus-wrap{margin-bottom:28px;}
+.fus-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;}
+.fus-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.fus-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-bottom:20px;}
+.fus-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;}
+.fus-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(200,168,75,0.03),transparent);pointer-events:none;}
+.fus-brand{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.fus-brand.growel{color:var(--amber);}
+.fus-brand.optiline{color:var(--green);}
+.fus-size{font-family:var(--serif);font-size:22px;font-weight:700;color:var(--text);margin-bottom:14px;}
+.fus-stat-row{display:flex;gap:18px;margin-bottom:12px;}
+.fus-stat{flex:1;}
+.fus-stat-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:4px;}
+.fus-stat-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--gold-light);}
+.fus-stat-unit{font-size:11px;color:var(--muted);font-family:var(--mono);}
+.fus-bar-wrap{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;margin-top:4px;}
+.fus-bar{height:6px;border-radius:3px;transition:width 0.6s cubic-bezier(.4,0,.2,1);}
+.fus-bar.growel{background:linear-gradient(90deg,var(--amber),#f5c060);}
+.fus-bar.optiline{background:linear-gradient(90deg,var(--green),#7dd4a8);}
+.fus-sessions{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:8px;}
+.fus-total-bar{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;}
+.fus-total-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+.fus-total-item{text-align:center;}
+.fus-total-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-weight:700;}
+.fus-total-val{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--gold);}
+.fus-no-data{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+.fus-dl-btn{background:rgba(200,168,75,0.1);border:1px solid rgba(200,168,75,0.3);color:var(--gold);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:var(--sans);}
+.fus-dl-btn:hover{background:rgba(200,168,75,0.2);}
+.fus-month-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);border-radius:8px;padding:5px 14px;font-size:12px;font-family:var(--mono);color:var(--green);}
+
+</style>
+</head>
+<body>
+
+<!-- ======== LOADING OVERLAY ======== -->
+<div id="loading-overlay">
+  <div class="loading-logo">🐟</div>
+  <div class="loading-text">Heritage Fish Company</div>
+  <div class="loading-sub">Connecting to database…</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+</div>
+
+<!-- ======== SYNC BAR ======== -->
+<div class="sync-bar" id="sync-bar">
+  <div class="sync-dot"></div>
+  <span id="sync-msg">Syncing…</span>
+</div>
+
+<!-- ======== PIN OVERLAY ======== -->
+<div class="pin-overlay hidden" id="pin-overlay">
+  <div class="pin-box" id="pin-box">
+    <div class="pin-icon">🔒</div>
+    <div class="pin-title">Admin Access</div>
+    <div class="pin-sub">Enter your PIN to continue</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key" onclick="pinKey('backspace')" style="font-size:15px;">&#9003;</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key" onclick="pinCancel()" style="font-size:13px;font-family:var(--sans);">Cancel</button>
+    </div>
+    <div class="pin-err" id="pin-err"></div>
+  </div>
+</div>
+
+<!-- ======== DOWNLOAD CHART MODAL ======== -->
+<div class="dl-overlay hidden" id="dl-overlay">
+  <div class="dl-box">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title">Download Chart</div>
+        <div class="dl-sub">Select chart type to export as PNG image</div>
+      </div>
+      <button class="dl-close" onclick="closeDlModal()">&#x2715;</button>
+    </div>
+    <label class="dl-option">
+      <input type="radio" name="dl-type" value="feed-bags" checked>
+      <div>
+        <div class="dl-opt-title">Bags Used by Feed Type</div>
+        <div class="dl-opt-sub">Total bags per feed (e.g. Growel 2mm — 20 bags) across all time</div>
+      </div>
+    </label>
+    <label class="dl-option">
+      <input type="radio" name="dl-type" value="feed-kg">
+      <div>
+        <div class="dl-opt-title">Feed by Weight (kg)</div>
+        <div class="dl-opt-sub">Total kilograms dispensed per feed type till date</div>
+      </div>
+    </label>
+    <label class="dl-option">
+      <input type="radio" name="dl-type" value="cage-kg">
+      <div>
+        <div class="dl-opt-title">Feed by Cage</div>
+        <div class="dl-opt-sub">Total kg fed per cage across all sessions</div>
+      </div>
+    </label>
+    <label class="dl-option">
+      <input type="radio" name="dl-type" value="daily">
+      <div>
+        <div class="dl-opt-title">Daily Feed History</div>
+        <div class="dl-opt-sub">kg fed per day over the last 14 days</div>
+      </div>
+    </label>
+    <label class="dl-option">
+      <input type="radio" name="dl-type" value="cage-summary">
+      <div>
+        <div class="dl-opt-title">⭐ Cage Total Summary</div>
+        <div class="dl-opt-sub">Summary card: every cage with total kg fed all-time (e.g. C1 — 9,800 kg)</div>
+      </div>
+    </label>
+    <button class="btn-gold" style="width:100%;margin-top:8px;padding:13px;" onclick="doDownloadChart()">
+      &#8659;&nbsp; Generate &amp; Download PNG
+    </button>
+    <canvas id="dl-canvas" style="display:none;"></canvas>
+  </div>
+</div>
+
+<!-- ======== HEADER ======== -->
+<header>
+  <div class="header-bg"></div>
+  <div class="wrap">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-logo">🐟</div>
+        <div>
+          <div class="brand-name">Heritage Fish Company</div>
+          <div class="brand-sub">Cage Feed Management System</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div class="lake-badge">🌊 Lake Victoria · Tilapia</div>
+            <div class="db-status" id="db-status"><div class="db-dot"></div><span id="db-status-text">Connecting…</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="live-clock" id="clock">—</div>
+        <div class="live-date" id="dateline">—</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- TABS -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="goTab('feed')">🐠 Log Feeding</button>
+    <button class="nav-tab" onclick="goTab('logs')">📋 Records</button>
+    <button class="nav-tab" onclick="goTab('stats')">📊 Reports</button>
+    <button class="nav-tab" onclick="goTab('monthly')">📅 Monthly</button>
+    <button class="nav-tab" onclick="goTab('stock')">🔍 Stock Check</button>
+  </div>
+
+  <!-- ========== FEED LOG PAGE ========== -->
+  <div id="pg-feed" class="page active">
+    <div class="card">
+      <div class="sec-title">Step 1 — Select Cage(s)</div>
+      <div class="quick-row">
+        <span class="q-label">Quick:</span>
+        <button class="qbtn" onclick="selSec('A')">All Section A</button>
+        <button class="qbtn" onclick="selSec('B')">All Section B</button>
+        <button class="qbtn" onclick="selSec('C')">All Section C</button>
+        <button class="qbtn" onclick="selSec('D')">All Section D</button>
+        <button class="qbtn" onclick="selAll()">All Cages</button>
+        <button class="qbtn" onclick="clearSel()">Clear</button>
+      </div>
+      <div id="cage-container"></div>
+      <div class="sel-summary" id="sel-summary">No cages selected</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">Step 2 — Select Feed Type &amp; Quantity</div>
+      <div class="feed-grid" id="feed-grid"></div>
+      <div id="feed-total-line" style="font-size:13px;font-family:var(--mono);color:var(--gold);padding:8px 4px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">Step 3 — Date, Time &amp; Notes</div>
+      <div class="form-row">
+        <div class="field-row">
+          <div class="field-label">Feeding Date</div>
+          <input type="date" class="field-inp" id="feed-date">
+        </div>
+        <div class="field-row">
+          <div class="field-label">Feeding Time</div>
+          <input type="time" class="field-inp" id="feed-time">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Operator / Fed By</div>
+        <input type="text" class="field-inp" id="feed-by" placeholder="Name of person feeding the cages">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Notes / Observations</div>
+        <textarea class="field-textarea" id="feed-notes" placeholder="e.g. Tilapia showing strong appetite · Water clarity good · Any abnormal behaviour…"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn-gold" id="submit-btn" onclick="submitFeed()">✓ Log Feeding Session</button>
+        <button class="btn-ghost" onclick="resetForm()">Reset</button>
+        <span class="form-err" id="form-err"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== RECORDS PAGE ========== -->
+  <div id="pg-logs" class="page">
+    <div class="filter-bar">
+      <select class="flt-sel" id="fl-cage" onchange="renderLogs()"><option value="">All Cages</option></select>
+      <select class="flt-sel" id="fl-feed" onchange="renderLogs()"><option value="">All Feeds</option></select>
+      <select class="flt-sel" id="fl-date" onchange="renderLogs()">
+        <option value="">All Dates</option>
+        <option value="today">Today</option>
+        <option value="week">This Week</option>
+        <option value="month">This Month</option>
+      </select>
+      <button class="btn-ghost" onclick="exportCSV()">&#8595; Export CSV</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Time</th><th>Cage(s)</th><th>Feed</th>
+            <th>Size</th><th>Bags</th><th>Total kg</th><th>Fed By</th><th>Notes</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="log-tbody"></tbody>
+      </table>
+    </div>
+    <div id="log-empty" class="empty" style="display:none">
+      <div class="ico">📋</div>
+      <p>No records yet. Start logging from the Feed tab.</p>
+    </div>
+  </div>
+
+  <!-- ========== REPORTS PAGE ========== -->
+  <div id="pg-stats" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+      <div class="sec-title" style="margin-bottom:0;flex:1;">Overview</div>
+      <button class="btn-gold" style="padding:10px 22px;font-size:13px;" onclick="openDlModal()">&#8659; Download Chart</button>
+    </div>
+    <div class="stats-grid" id="stats-cards"></div>
+    <div class="divider"></div>
+    <div class="sec-title">Feed Usage by Type</div>
+    <div class="card" id="feed-breakdown" style="padding:18px 22px;"></div>
+    <div class="divider"></div>
+    <div class="sec-title">Feed Usage by Cage</div>
+    <div class="card" id="cage-breakdown" style="padding:18px 22px;"></div>
+    <div class="divider"></div>
+    <div class="sec-title">Daily Feed History (Last 14 Days)</div>
+    <div class="card" id="daily-history" style="padding:18px 22px;"></div>
+  </div>
+
+
+  <!-- ========== STOCK CHECK PAGE ========== -->
+  <div id="pg-stock" class="page">
+    <div class="sec-title">Date Range Stock Analysis</div>
+
+    <div class="card" style="padding:22px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">
+        Select a date range to see exactly how many bags of each feed were used — so you can verify against your stock balance.
+      </div>
+      <div class="form-row" style="margin-bottom:14px;">
+        <div class="field-row" style="margin-bottom:0;">
+          <div class="field-label">From Date</div>
+          <input type="date" class="field-inp" id="stock-from">
+        </div>
+        <div class="field-row" style="margin-bottom:0;">
+          <div class="field-label">To Date</div>
+          <input type="date" class="field-inp" id="stock-to">
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:18px;">
+        <div class="field-row" style="margin-bottom:0;">
+          <div class="field-label">Cage Filter (optional)</div>
+          <select class="field-select" id="stock-cage">
+            <option value="">All Cages</option>
+          </select>
+        </div>
+        <div class="field-row" style="margin-bottom:0;">
+          <div class="field-label">Feed Size Filter (optional)</div>
+          <select class="field-select" id="stock-size">
+            <option value="">All Sizes</option>
+            <option value="2mm">2mm only</option>
+            <option value="3mm">3mm only</option>
+            <option value="4mm">4mm only</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button class="btn-gold" onclick="runStockCheck()" style="padding:11px 28px;font-size:14px;">🔍 Analyse Stock Usage</button>
+        <button class="btn-ghost" onclick="setStockPreset('week')">Last 7 Days</button>
+        <button class="btn-ghost" onclick="setStockPreset('month')">Last 30 Days</button>
+        <button class="btn-ghost" onclick="setStockPreset('today')">Today</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="stock-results" style="display:none;">
+
+      <!-- Summary bar -->
+      <div id="stock-summary-bar" style="margin-bottom:20px;"></div>
+
+      <!-- Per-feed cards -->
+      <div class="sec-title">Bags Used Per Feed Type</div>
+      <div id="stock-feed-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:24px;"></div>
+
+      <!-- Daily breakdown table -->
+      <div class="sec-title">Day-by-Day Breakdown</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="tbl-wrap">
+          <table id="stock-daily-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Feed</th>
+                <th>Size</th>
+                <th>Bags Used</th>
+                <th>Total kg</th>
+                <th>Cage(s)</th>
+              </tr>
+            </thead>
+            <tbody id="stock-daily-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Download button -->
+      <div style="margin-top:18px;">
+        <button class="btn-ghost" onclick="downloadStockCSV()">⬇ Download Stock Report CSV</button>
+      </div>
+    </div>
+
+    <div id="stock-empty" style="display:none;" class="empty">
+      <div class="ico">📦</div>
+      <p>No feeding records found for this date range and filter.</p>
+    </div>
+  </div>
+
+  <!-- ========== MONTHLY REPORT PAGE ========== -->
+  <div id="pg-monthly" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+      <div class="sec-title" style="margin-bottom:0;flex:1;">Monthly Feed Report</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-ghost" onclick="openMonthlyChartModal()">&#128444; Download Chart (PNG)</button>
+        <button class="rpt-dl-btn" onclick="downloadMonthlyReport()">&#8659; Download Report (CSV)</button>
+      </div>
+    </div>
+
+    <!-- Month + Cage selector (shared by all sections on this page) -->
+    <div class="card" style="padding:18px 22px;margin-bottom:22px;">
+      <div class="report-controls">
+        <div class="field-row">
+          <div class="field-label">Month</div>
+          <select class="field-select" id="rpt-month" onchange="renderMonthlyReport();renderFeedUsage();">
+          </select>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Cage Filter</div>
+          <select class="field-select" id="rpt-cage" onchange="renderMonthlyReport();renderFeedUsage();">
+            <option value="">All Cages</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FEED USAGE SUMMARY ===== -->
+    <div class="fus-wrap">
+      <div class="fus-header">
+        <div class="report-section-title" style="margin-bottom:0;flex:1;">🛍 Feed Usage This Month</div>
+        <button class="fus-dl-btn" onclick="downloadFeedUsageCSV()">⬇ Download Usage CSV</button>
+      </div>
+      <div id="fus-totals-bar"></div>
+      <div id="fus-cards-grid" class="fus-cards"></div>
+    </div>
+
+    <div id="monthly-report-content">
+      <div class="no-data-rpt">Select a month above to generate the report.</div>
+    </div>
+  </div>
+
+
+<!-- ======== MONTHLY CHART MODAL ======== -->
+<div class="dl-overlay hidden" id="monthly-chart-overlay">
+  <div class="dl-box" style="width:480px;">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title">Download Monthly Chart</div>
+        <div class="dl-sub" id="mcm-sub">Select chart type to export as PNG image</div>
+      </div>
+      <button class="dl-close" onclick="closeMonthlyChartModal()">&#x2715;</button>
+    </div>
+    <label class="dl-option">
+      <input type="radio" name="mcm-type" value="monthly-feed-kg" checked>
+      <div>
+        <div class="dl-opt-title">Feed by Type &amp; Size (kg)</div>
+        <div class="dl-opt-sub">Bar chart — total kg per feed type this month</div>
+      </div>
+    </label>
+    <label class="dl-option">
+      <input type="radio" name="mcm-type" value="monthly-feed-bags">
+      <div>
+        <div class="dl-opt-title">Feed by Type &amp; Size (bags)</div>
+        <div class="dl-opt-sub">Bar chart — total bags used per feed type this month</div>
+      </div>
+    </label>
+    <label class="dl-option">
+      <input type="radio" name="mcm-type" value="monthly-cage-kg">
+      <div>
+        <div class="dl-opt-title">Feed by Cage (kg)</div>
+        <div class="dl-opt-sub">Bar chart — total kg per cage this month</div>
+      </div>
+    </label>
+    <label class="dl-option">
+      <input type="radio" name="mcm-type" value="monthly-daily">
+      <div>
+        <div class="dl-opt-title">Daily Feed Activity</div>
+        <div class="dl-opt-sub">Bar chart — kg fed per day this month</div>
+      </div>
+    </label>
+    <label class="dl-option">
+      <input type="radio" name="mcm-type" value="monthly-cage-summary">
+      <div>
+        <div class="dl-opt-title">Cage Summary — This Month Only</div>
+        <div class="dl-opt-sub">Summary card: every cage with total kg fed this selected month only</div>
+      </div>
+    </label>
+    <label class="dl-option" style="border-color:rgba(200,168,75,0.4);background:rgba(200,168,75,0.06);">
+      <input type="radio" name="mcm-type" value="alltime-cage-summary">
+      <div>
+        <div class="dl-opt-title" style="color:var(--gold-light);">⭐ All-Time Cage Summary (From Day One)</div>
+        <div class="dl-opt-sub">Every cage · total kg from first ever session to today · shows date range per cage</div>
+      </div>
+    </label>
+    <button class="btn-gold" style="width:100%;margin-top:8px;padding:13px;" onclick="doDownloadMonthlyChart()">
+      &#8659;&nbsp; Generate &amp; Download PNG
+    </button>
+    <canvas id="mcm-canvas" style="display:none;"></canvas>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ======== FIREBASE ======== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, getDocs, deleteDoc, doc,
+  onSnapshot, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ====================== FIREBASE CONFIG ======================
+const firebaseConfig = {
+  apiKey: "AIzaSyCNhnHflq1heODof-vdffZUkNTJPQu7fWA",
+  authDomain: "myproject-15210.firebaseapp.com",
+  databaseURL: "https://myproject-15210-default-rtdb.firebaseio.com",
+  projectId: "myproject-15210",
+  storageBucket: "myproject-15210.firebasestorage.app",
+  messagingSenderId: "1081766169567",
+  appId: "1:1081766169567:web:6801690eb2a93a558e526a",
+  measurementId: "G-2VQVL8MZ6B"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ====================== PIN LOCK ======================
+// ⚠ Your PIN — change here if you ever want a new one
+const ADMIN_PIN = '2001';
+
+let pinBuffer   = '';
+let pinCallback = null;
+let pinUnlocked = false;
+let pinTimer    = null;
+
+function requirePin(cb){
+  if(pinUnlocked){ cb(); return; }
+  pinCallback = cb;
+  pinBuffer   = '';
+  updatePinDots();
+  document.getElementById('pin-err').textContent = '';
+  document.getElementById('pin-overlay').classList.remove('hidden');
+}
+
+window.pinKey = function(k){
+  const err = document.getElementById('pin-err');
+  err.textContent = '';
+  if(k === 'backspace'){ pinBuffer = pinBuffer.slice(0,-1); updatePinDots(); return; }
+  if(pinBuffer.length >= 4) return;
+  pinBuffer += k;
+  updatePinDots();
+  if(pinBuffer.length === 4){
+    setTimeout(()=>{
+      if(pinBuffer === ADMIN_PIN){
+        pinUnlocked = true;
+        clearTimeout(pinTimer);
+        // Stay unlocked for 5 minutes
+        pinTimer = setTimeout(()=>{ pinUnlocked = false; }, 5 * 60 * 1000);
+        document.getElementById('pin-overlay').classList.add('hidden');
+        if(pinCallback){ pinCallback(); pinCallback = null; }
+      } else {
+        pinBuffer = '';
+        updatePinDots();
+        err.textContent = '✕ Incorrect PIN. Try again.';
+        const box = document.getElementById('pin-box');
+        box.classList.add('pin-shake');
+        setTimeout(()=> box.classList.remove('pin-shake'), 350);
+      }
+    }, 100);
+  }
+};
+
+window.pinCancel = function(){
+  pinBuffer = ''; pinCallback = null;
+  updatePinDots();
+  document.getElementById('pin-overlay').classList.add('hidden');
+};
+
+function updatePinDots(){
+  for(let i=0;i<4;i++)
+    document.getElementById('pd'+i).classList.toggle('filled', i < pinBuffer.length);
+}
+
+// ====================== CONSTANTS ======================
+const CAGES = {
+  A: ['A1','A2','A3'],
+  B: ['B1','B2','B3'],
+  C: ['C1','C2','C3'],
+  D: ['D1','D2','D3','D4']
+};
+const FEEDS = [
+  {id:'growel-2mm',   label:'Growel',   size:'2mm', kg:20, type:'growel'},
+  {id:'growel-3mm',   label:'Growel',   size:'3mm', kg:20, type:'growel'},
+  {id:'growel-4mm',   label:'Growel',   size:'4mm', kg:20, type:'growel'},
+  {id:'optiline-2mm', label:'Optiline', size:'2mm', kg:25, type:'optiline'},
+  {id:'optiline-3mm', label:'Optiline', size:'3mm', kg:25, type:'optiline'},
+  {id:'optiline-4mm', label:'Optiline', size:'4mm', kg:25, type:'optiline'},
+];
+
+let selCages = new Set();
+let feedQty  = {}; FEEDS.forEach(f => feedQty[f.id] = 0);
+let logs     = [];
+
+// ====================== LOADING ======================
+function hideLoadingOverlay(){
+  const o = document.getElementById('loading-overlay');
+  if(!o.classList.contains('hide')){ o.classList.add('hide'); setTimeout(()=>o.style.display='none',600); }
+}
+setTimeout(hideLoadingOverlay, 5000);
+
+// ====================== CLOCK ======================
+function tick(){
+  const n = new Date();
+  document.getElementById('clock').textContent    = n.toLocaleTimeString('en-GB');
+  document.getElementById('dateline').textContent = n.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+tick(); setInterval(tick, 1000);
+
+(function(){
+  const n = new Date();
+  document.getElementById('feed-date').value = n.toISOString().slice(0,10);
+  document.getElementById('feed-time').value = n.toTimeString().slice(0,5);
+})();
+
+// ====================== DB STATUS ======================
+function setDbStatus(online){
+  const el  = document.getElementById('db-status');
+  const txt = document.getElementById('db-status-text');
+  el.className = 'db-status' + (online ? '' : ' offline');
+  txt.textContent = online ? 'Live' : 'Offline';
+}
+
+// ====================== FIRESTORE LISTENER ======================
+const logsRef   = collection(db, 'feed_logs');
+const logsQuery = query(logsRef, orderBy('ts','desc'));
+
+onSnapshot(logsQuery, (snapshot)=>{
+  logs = snapshot.docs.map(d=>({ firestoreId: d.id, ...d.data() }));
+  setDbStatus(true);
+  hideLoadingOverlay();
+  buildCages();
+  const activeTab = document.querySelector('.nav-tab.active');
+  if(activeTab){
+    const idx  = [...document.querySelectorAll('.nav-tab')].indexOf(activeTab);
+    const tabs = ['feed','logs','stats','monthly'];
+    if(tabs[idx]==='logs'){ populateFilters(); renderLogs(); }
+    if(tabs[idx]==='stats') renderStats();
+    if(tabs[idx]==='monthly') renderMonthlyReport();
+  }
+}, (error)=>{
+  console.error('Firestore error:', error);
+  setDbStatus(false);
+  hideLoadingOverlay();
+  toast('⚠ Database connection error');
+});
+
+// ====================== TABS ======================
+window.goTab = function(t){
+  ['feed','logs','stats','monthly','stock'].forEach((x,i)=>{
+    document.getElementById('pg-'+x).classList.toggle('active', x===t);
+    document.querySelectorAll('.nav-tab')[i].classList.toggle('active', x===t);
+  });
+  if(t==='logs'){ populateFilters(); renderLogs(); }
+  if(t==='stats') renderStats();
+  if(t==='monthly'){ populateMonthlySelectors(); renderMonthlyReport(); renderFeedUsage(); }
+  if(t==='stock') populateStockCageFilter();
+};
+
+// ====================== CAGE UI ======================
+function buildCages(){
+  const c = document.getElementById('cage-container');
+  c.innerHTML = '';
+  Object.entries(CAGES).forEach(([sec,cids])=>{
+    const wrap = document.createElement('div');
+    wrap.className = `section-group sg-${sec}`;
+    const lbl = document.createElement('div');
+    lbl.className = 'sec-badge-label';
+    lbl.textContent = `Section ${sec}`;
+    const row = document.createElement('div');
+    row.className = 'cage-row';
+    cids.forEach(cid=>{
+      const div = document.createElement('div');
+      div.className = 'cage-tile' + (selCages.has(cid)?' sel':'');
+      div.id = 'ct-'+cid;
+      const fedToday = wasFedToday(cid);
+      div.innerHTML = `
+        ${fedToday?'<div class="fed-pip"></div>':''}
+        <div class="cage-id">${cid}</div>
+        <div class="cage-status">${fedToday?'✓ Fed':'Pending'}</div>
+      `;
+      div.onclick = ()=> toggleCage(cid);
+      row.appendChild(div);
+    });
+    wrap.appendChild(lbl);
+    wrap.appendChild(row);
+    c.appendChild(wrap);
+  });
+}
+
+function wasFedToday(cid){
+  const today = new Date().toDateString();
+  return logs.some(l => l.cages && l.cages.includes(cid) && new Date(l.ts).toDateString()===today);
+}
+
+function toggleCage(cid){ selCages.has(cid)?selCages.delete(cid):selCages.add(cid); updateCageUI(); }
+function updateCageUI(){
+  document.querySelectorAll('.cage-tile').forEach(el=>{
+    el.classList.toggle('sel', selCages.has(el.id.replace('ct-','')));
+  });
+  const n  = selCages.size;
+  const el = document.getElementById('sel-summary');
+  el.innerHTML = n===0?'No cages selected':`<strong>${n} cage${n>1?'s':''} selected: ${[...selCages].sort().join(', ')}</strong>`;
+}
+window.selSec  = s => { CAGES[s].forEach(c=>selCages.add(c)); updateCageUI(); };
+window.selAll  = ()=> { Object.values(CAGES).flat().forEach(c=>selCages.add(c)); updateCageUI(); };
+window.clearSel= ()=> { selCages.clear(); updateCageUI(); };
+
+// ====================== FEED TILES ======================
+function buildFeedGrid(){
+  const g = document.getElementById('feed-grid');
+  g.innerHTML = '';
+  FEEDS.forEach(f=>{
+    const el = document.createElement('div');
+    el.className = 'feed-tile';
+    el.id = 'ft-'+f.id;
+    el.innerHTML = `
+      <div class="ft-brand ${f.type}">${f.label}</div>
+      <div class="ft-size">${f.size}</div>
+      <div class="ft-kg">${f.kg} kg / bag</div>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="chQty('${f.id}',-1)">−</button>
+        <input class="qty-inp" id="q-${f.id}" type="number" min="0" value="0" onchange="setQty('${f.id}',this.value)">
+        <button class="qty-btn" onclick="chQty('${f.id}',1)">+</button>
+        <span class="qty-lbl">bags</span>
+      </div>
+      <div class="total-preview" id="tp-${f.id}"></div>
+    `;
+    g.appendChild(el);
+  });
+}
+window.chQty = (id,d)=>{ feedQty[id]=Math.max(0,(feedQty[id]||0)+d); refreshFeedTile(id); };
+window.setQty = (id,v)=>{ feedQty[id]=Math.max(0,parseInt(v)||0); refreshFeedTile(id); };
+function refreshFeedTile(id){
+  const f = FEEDS.find(x=>x.id===id);
+  const q = feedQty[id];
+  document.getElementById('q-'+id).value = q;
+  document.getElementById('ft-'+id).classList.toggle('sel', q>0);
+  document.getElementById('tp-'+id).textContent = q>0?`= ${q*f.kg} kg total`:'';
+  updateFeedTotal();
+}
+function updateFeedTotal(){
+  let t = 0; FEEDS.forEach(f=>{ t += feedQty[f.id]*f.kg; });
+  document.getElementById('feed-total-line').textContent = t>0?`Grand total this session: ${t} kg (${(t/1000).toFixed(3)} t)`:'';
+}
+
+// ====================== SUBMIT (PIN protected) ======================
+window.submitFeed = function(){
+  const err = document.getElementById('form-err');
+  err.textContent = '';
+  if(selCages.size===0){ err.textContent='⚠ Please select at least one cage.'; return; }
+  const feeds = FEEDS.filter(f=>feedQty[f.id]>0);
+  if(!feeds.length){ err.textContent='⚠ Please select at least one feed type.'; return; }
+  const dateVal = document.getElementById('feed-date').value;
+  if(!dateVal){ err.textContent='⚠ Please enter a date.'; return; }
+  // Ask for PIN before saving
+  requirePin(()=> doSaveFeed(feeds, dateVal));
+};
+
+async function doSaveFeed(feeds, dateVal){
+  const timeVal = document.getElementById('feed-time').value;
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  showSync('Saving feeding record…');
+
+  const entry = {
+    ts:        new Date(`${dateVal}T${timeVal||'00:00'}`).toISOString(),
+    cages:     [...selCages].sort(),
+    feeds:     feeds.map(f=>({id:f.id,label:f.label,size:f.size,kg:f.kg,type:f.type,qty:feedQty[f.id]})),
+    fedBy:     document.getElementById('feed-by').value.trim(),
+    notes:     document.getElementById('feed-notes').value.trim(),
+    createdAt: serverTimestamp()
+  };
+  try {
+    await addDoc(logsRef, entry);
+    toast(`✓ Feeding logged for ${entry.cages.join(', ')}`);
+    showSync('Saved to database ✓');
+    setTimeout(hideSync, 2000);
+    resetForm();
+  } catch(e){
+    console.error(e);
+    document.getElementById('form-err').textContent = '⚠ Failed to save. Check your connection.';
+    hideSync();
+  } finally {
+    btn.disabled = false; btn.textContent = '✓ Log Feeding Session';
+  }
+}
+
+window.resetForm = function(){
+  clearSel();
+  FEEDS.forEach(f=>{ feedQty[f.id]=0; });
+  document.querySelectorAll('.qty-inp').forEach(el=>el.value=0);
+  document.querySelectorAll('.feed-tile').forEach(el=>el.classList.remove('sel'));
+  document.querySelectorAll('.total-preview').forEach(el=>el.textContent='');
+  document.getElementById('feed-total-line').textContent='';
+  document.getElementById('feed-notes').value='';
+  document.getElementById('feed-by').value='';
+  document.getElementById('form-err').textContent='';
+  const n=new Date();
+  document.getElementById('feed-date').value=n.toISOString().slice(0,10);
+  document.getElementById('feed-time').value=n.toTimeString().slice(0,5);
+};
+
+// ====================== SYNC & TOAST ======================
+function showSync(msg){ document.getElementById('sync-msg').textContent=msg; document.getElementById('sync-bar').classList.add('show'); }
+function hideSync(){ document.getElementById('sync-bar').classList.remove('show'); }
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),3000); }
+
+// ====================== LOGS ======================
+function populateFilters(){
+  const allC = Object.values(CAGES).flat();
+  document.getElementById('fl-cage').innerHTML='<option value="">All Cages</option>'+allC.map(c=>`<option value="${c}">${c}</option>`).join('');
+  document.getElementById('fl-feed').innerHTML='<option value="">All Feeds</option>'+FEEDS.map(f=>`<option value="${f.id}">${f.label} ${f.size}</option>`).join('');
+}
+
+window.renderLogs = function(){
+  const fc=document.getElementById('fl-cage').value;
+  const ff=document.getElementById('fl-feed').value;
+  const fd=document.getElementById('fl-date').value;
+  const today=new Date().toDateString();
+  const weekAgo=new Date(Date.now()-7*864e5);
+  const monthAgo=new Date(Date.now()-30*864e5);
+  let data=logs.filter(l=>{
+    if(!l.cages) return false;
+    if(fc&&!l.cages.includes(fc)) return false;
+    if(ff&&!l.feeds.some(f=>f.id===ff)) return false;
+    const d=new Date(l.ts);
+    if(fd==='today'&&d.toDateString()!==today) return false;
+    if(fd==='week'&&d<weekAgo) return false;
+    if(fd==='month'&&d<monthAgo) return false;
+    return true;
+  });
+  const tbody=document.getElementById('log-tbody');
+  const empty=document.getElementById('log-empty');
+  if(!data.length){ tbody.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display='none';
+  tbody.innerHTML=data.map(l=>{
+    const dt=new Date(l.ts);
+    const ds=dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const ts=dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return l.feeds.map((f,i)=>`
+      <tr>
+        ${i===0?`<td rowspan="${l.feeds.length}" style="white-space:nowrap;font-family:var(--mono);font-size:12px;">${ds}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="font-family:var(--mono);font-size:12px;color:var(--muted);">${ts}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="font-weight:700;">${l.cages.join(', ')}</td>`:''}
+        <td><span class="tag-${f.type}">${f.label}</span></td>
+        <td style="font-family:var(--mono);color:var(--gold);">${f.size}</td>
+        <td style="font-family:var(--mono);">${f.qty}</td>
+        <td style="font-family:var(--mono);font-weight:700;">${f.qty*f.kg} kg</td>
+        ${i===0?`<td rowspan="${l.feeds.length}" style="font-size:12px;color:var(--muted);">${l.fedBy||'—'}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="font-size:12px;color:var(--muted);max-width:180px;">${l.notes||'—'}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}"><button class="del-btn" onclick="deleteLog('${l.firestoreId}')">✕</button></td>`:''}
+      </tr>`).join('');
+  }).join('');
+};
+
+// DELETE — PIN protected
+window.deleteLog = function(firestoreId){
+  requirePin(async ()=>{
+    if(!confirm('Delete this feeding record?')) return;
+    showSync('Deleting record…');
+    try {
+      await deleteDoc(doc(db,'feed_logs',firestoreId));
+      showSync('Deleted ✓');
+      setTimeout(hideSync, 1500);
+    } catch(e){
+      toast('⚠ Could not delete. Check connection.');
+      hideSync();
+    }
+  });
+};
+
+window.exportCSV = function(){
+  const rows=[['Date','Time','Cages','Feed','Size','Bags','Total kg','Fed By','Notes']];
+  logs.forEach(l=>{
+    const dt=new Date(l.ts);
+    l.feeds.forEach(f=>{
+      rows.push([dt.toLocaleDateString('en-GB'),dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),l.cages.join(';'),f.label,f.size,f.qty,f.qty*f.kg,l.fedBy,l.notes]);
+    });
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=`HFC_feed_records_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+};
+
+// ====================== STATS ======================
+function renderStats(){
+  const today=new Date().toDateString();
+  let totalKg=0,todayKg=0,totalBags=0;
+  const feedMap={},cageMap={},dailyMap={};
+  logs.forEach(l=>{
+    if(!l.cages) return;
+    const isToday=new Date(l.ts).toDateString()===today;
+    const dayKey=new Date(l.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    l.feeds.forEach(f=>{
+      const kg=f.qty*f.kg;
+      totalKg+=kg; totalBags+=f.qty;
+      if(isToday) todayKg+=kg;
+      if(!feedMap[f.id]) feedMap[f.id]={label:f.label+' '+f.size,kg:0,bags:0,type:f.type};
+      feedMap[f.id].kg+=kg; feedMap[f.id].bags+=f.qty;
+      l.cages.forEach(c=>{
+        if(!cageMap[c]) cageMap[c]={kg:0};
+        cageMap[c].kg+=kg;
+      });
+    });
+    if(Date.now()-new Date(l.ts)<14*864e5){
+      if(!dailyMap[dayKey]) dailyMap[dayKey]=0;
+      dailyMap[dayKey]+=l.feeds.reduce((s,f)=>s+f.qty*f.kg,0);
+    }
+  });
+  document.getElementById('stats-cards').innerHTML=`
+    <div class="stat-card"><div class="stat-lbl">Total Feed Dispensed</div><div class="stat-val gold-val">${(totalKg/1000).toFixed(2)}<span style="font-size:16px"> t</span></div><div class="stat-sub">${totalKg.toLocaleString()} kg total</div></div>
+    <div class="stat-card"><div class="stat-lbl">Today's Feed</div><div class="stat-val green-val">${todayKg}<span style="font-size:16px"> kg</span></div><div class="stat-sub">${new Date().toLocaleDateString('en-GB',{weekday:'long'})}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Total Bags Used</div><div class="stat-val water-val">${totalBags}</div><div class="stat-sub">across all sessions</div></div>
+    <div class="stat-card"><div class="stat-lbl">Feed Sessions</div><div class="stat-val amber-val">${logs.length}</div><div class="stat-sub">records logged</div></div>
+  `;
+  const maxF=Math.max(...Object.values(feedMap).map(x=>x.kg),1);
+  document.getElementById('feed-breakdown').innerHTML=
+    !Object.keys(feedMap).length?'<p style="color:var(--muted);font-size:13px;">No data yet.</p>':
+    Object.entries(feedMap).sort((a,b)=>b[1].kg-a[1].kg).map(([id,f])=>`
+      <div class="bar-row">
+        <div class="bar-header">
+          <span><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;font-family:var(--mono);background:${f.type==='growel'?'rgba(240,160,75,0.15)':'rgba(76,175,125,0.12)'};color:${f.type==='growel'?'var(--amber)':'var(--green)'};">${f.label}</span></span>
+          <span style="font-family:var(--mono);font-weight:600;">${f.kg.toLocaleString()} kg <span style="color:var(--muted);font-weight:400;">(${f.bags} bags)</span></span>
+        </div>
+        <div class="bar-track"><div class="bar-fill ${f.type==='growel'?'bar-gold':'bar-green'}" style="width:${(f.kg/maxF*100).toFixed(1)}%"></div></div>
+      </div>`).join('');
+
+  const cageEntries=Object.values(CAGES).flat().map(cid=>({cid,kg:cageMap[cid]?.kg||0}));
+  const maxC=Math.max(...cageEntries.map(x=>x.kg),1);
+  document.getElementById('cage-breakdown').innerHTML=
+    !cageEntries.some(x=>x.kg>0)?'<p style="color:var(--muted);font-size:13px;">No data yet.</p>':
+    cageEntries.sort((a,b)=>b.kg-a.kg).map(({cid,kg})=>`
+      <div class="bar-row">
+        <div class="bar-header"><span style="font-weight:700;">${cid}</span><span style="font-family:var(--mono);font-weight:600;">${kg.toLocaleString()} kg</span></div>
+        <div class="bar-track"><div class="bar-fill bar-gold" style="width:${kg?((kg/maxC)*100).toFixed(1):0}%"></div></div>
+      </div>`).join('');
+
+  const days=Object.keys(dailyMap);
+  const maxD=Math.max(...Object.values(dailyMap),1);
+  document.getElementById('daily-history').innerHTML=
+    !days.length?'<p style="color:var(--muted);font-size:13px;">No data in last 14 days.</p>':
+    days.map(d=>`
+      <div class="bar-row">
+        <div class="bar-header"><span style="font-family:var(--mono);font-size:12px;">${d}</span><span style="font-family:var(--mono);font-weight:600;">${dailyMap[d].toLocaleString()} kg</span></div>
+        <div class="bar-track"><div class="bar-fill bar-green" style="width:${(dailyMap[d]/maxD*100).toFixed(1)}%"></div></div>
+      </div>`).join('');
+}
+
+// ====================== DOWNLOAD CHART ======================
+window.openDlModal  = ()=> document.getElementById('dl-overlay').classList.remove('hidden');
+window.closeDlModal = ()=> document.getElementById('dl-overlay').classList.add('hidden');
+
+window.doDownloadChart = function(){
+  const type   = document.querySelector('input[name="dl-type"]:checked').value;
+  const W=960, H=580;
+  const canvas = document.getElementById('dl-canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+
+  // Colours
+  const BG='#112b1e', PANEL='rgba(26,58,42,0.95)', BORDER='rgba(200,168,75,0.25)';
+  const GOLD='#c8a84b', GOLD2='#e8c96a', GREEN='#4caf7d', WATER='#2d7d9a';
+  const AMBER='#f0a04b', CORAL='#e07060', TEXT='#e8dfc8', MUTED='#8aab90';
+  const PALETTE=[GOLD,GREEN,WATER,AMBER,CORAL,'#9b6dca','#5ba8d4','#7dd4a8'];
+
+  // Background
+  ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+  // Subtle gradient overlay
+  const bgGr=ctx.createLinearGradient(0,0,W,H);
+  bgGr.addColorStop(0,'rgba(45,125,154,0.06)');
+  bgGr.addColorStop(1,'rgba(76,175,125,0.04)');
+  ctx.fillStyle=bgGr; ctx.fillRect(0,0,W,H);
+
+  // Header band
+  ctx.fillStyle='rgba(26,58,42,0.95)'; ctx.fillRect(0,0,W,68);
+  ctx.fillStyle=BORDER; ctx.fillRect(0,67,W,1);
+  // Logo area
+  ctx.fillStyle='rgba(200,168,75,0.15)'; ctx.beginPath(); ctx.roundRect(20,10,48,48,10); ctx.fill();
+  ctx.font='26px serif'; ctx.fillText('🐟',27,44);
+  // Brand
+  ctx.font=`bold 16px 'Playfair Display', Georgia, serif`;
+  ctx.fillStyle=GOLD2; ctx.textAlign='left'; ctx.fillText('Heritage Fish Company',78,30);
+  ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.fillText('Cage Feed Management · Lake Victoria · Tilapia',78,48);
+  // Date
+  const dateStr=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  ctx.font='11px monospace'; ctx.fillStyle=MUTED; ctx.textAlign='right';
+  ctx.fillText('Generated: '+dateStr, W-20, 38);
+  ctx.textAlign='left';
+
+  // Chart area
+  const cL=70, cT=110, cR=W-30, cB=H-70;
+  const cW=cR-cL, cH=cB-cT;
+
+  function drawGrid(maxV, steps=5){
+    for(let i=0;i<=steps;i++){
+      const y=cB-(i/steps)*cH;
+      ctx.beginPath(); ctx.moveTo(cL,y); ctx.lineTo(cR,y);
+      ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(200,168,75,0.1)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font='11px monospace'; ctx.fillStyle=MUTED; ctx.textAlign='right';
+      ctx.fillText(Math.round(maxV*i/steps).toLocaleString(), cL-8, y+4);
+    }
+    ctx.beginPath(); ctx.moveTo(cL,cT-10); ctx.lineTo(cL,cB); ctx.lineTo(cR,cB);
+    ctx.strokeStyle='rgba(200,168,75,0.25)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.textAlign='left';
+  }
+
+  function drawTitle(t, sub){
+    ctx.font=`bold 15px 'Playfair Display', Georgia, serif`;
+    ctx.fillStyle=TEXT; ctx.textAlign='left';
+    ctx.fillText(t, cL, cT-22);
+    if(sub){ ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.fillText(sub, cL, cT-8); }
+  }
+
+  function drawBars(entries, valFn, labelFn, colorFn, yLabel){
+    if(!entries.length){ ctx.font='14px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center'; ctx.fillText('No data recorded yet.', W/2, H/2); return; }
+    const maxV=Math.max(...entries.map(valFn),1);
+    drawGrid(maxV);
+    const gap=cW/entries.length;
+    const bw=Math.min(54, gap*0.6);
+    entries.forEach((e,i)=>{
+      const v=valFn(e); const bh=(v/maxV)*cH;
+      const x=cL+gap*i+gap/2-bw/2; const y=cB-bh;
+      const col=colorFn(e,i);
+      const gr=ctx.createLinearGradient(x,y,x,cB);
+      gr.addColorStop(0,col); gr.addColorStop(1,col+'33');
+      ctx.beginPath(); ctx.roundRect(x,y,bw,bh,[5,5,0,0]); ctx.fillStyle=gr; ctx.fill();
+      // Value label
+      if(bh>20){ ctx.font='bold 11px monospace'; ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.fillText(v.toLocaleString(),x+bw/2,y+15); }
+      else if(v>0){ ctx.font='bold 11px monospace'; ctx.fillStyle=col; ctx.textAlign='center'; ctx.fillText(v.toLocaleString(),x+bw/2,y-5); }
+      // X label
+      ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+      const lbl=labelFn(e);
+      const words=lbl.split(' ');
+      if(words.length>1&&ctx.measureText(lbl).width>bw+16){
+        ctx.fillText(words[0],x+bw/2,cB+16);
+        ctx.fillText(words.slice(1).join(' '),x+bw/2,cB+29);
+      } else { ctx.fillText(lbl,x+bw/2,cB+16); }
+    });
+    // Y axis label
+    ctx.save(); ctx.translate(18,cT+cH/2); ctx.rotate(-Math.PI/2);
+    ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+    ctx.fillText(yLabel,0,0); ctx.restore();
+  }
+
+  // Build feed totals
+  const feedMap={}, cageMap={}, dailyMap={};
+  logs.forEach(l=>{
+    if(!l.cages) return;
+    const dayKey=new Date(l.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    l.feeds.forEach(f=>{
+      const kg=f.qty*f.kg;
+      if(!feedMap[f.id]) feedMap[f.id]={label:f.label+' '+f.size,bags:0,kg:0,type:f.type};
+      feedMap[f.id].bags+=f.qty; feedMap[f.id].kg+=kg;
+      l.cages.forEach(c=>{
+        if(!cageMap[c]) cageMap[c]={kg:0};
+        cageMap[c].kg+=kg;
+      });
+    });
+    if(Date.now()-new Date(l.ts)<14*864e5){
+      if(!dailyMap[dayKey]) dailyMap[dayKey]=0;
+      dailyMap[dayKey]+=l.feeds.reduce((s,f)=>s+f.qty*f.kg,0);
+    }
+  });
+
+  if(type==='feed-bags'){
+    const entries=FEEDS.map(f=>({f,bags:feedMap[f.id]?.bags||0})).filter(e=>e.bags>0);
+    drawTitle('Bags Used by Feed Type — All Time','Total bags consumed per feed since records began');
+    drawBars(entries, e=>e.bags, e=>e.f.label+' '+e.f.size,
+      (e,i)=>e.f.type==='growel'?AMBER:GREEN, 'Bags Used');
+    // Legend
+    ctx.fillStyle=AMBER; ctx.beginPath(); ctx.roundRect(cL,H-44,12,12,3); ctx.fill();
+    ctx.font='12px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='left'; ctx.fillText('Growel',cL+16,H-34);
+    ctx.fillStyle=GREEN; ctx.beginPath(); ctx.roundRect(cL+80,H-44,12,12,3); ctx.fill();
+    ctx.fillText('Optiline',cL+96,H-34);
+
+  } else if(type==='feed-kg'){
+    const entries=FEEDS.map(f=>({f,kg:feedMap[f.id]?.kg||0})).filter(e=>e.kg>0);
+    drawTitle('Feed by Weight (kg) — All Time','Total kilograms dispensed per feed type');
+    drawBars(entries, e=>e.kg, e=>e.f.label+' '+e.f.size,
+      (e,i)=>e.f.type==='growel'?AMBER:GREEN, 'Total kg');
+    ctx.fillStyle=AMBER; ctx.beginPath(); ctx.roundRect(cL,H-44,12,12,3); ctx.fill();
+    ctx.font='12px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='left'; ctx.fillText('Growel',cL+16,H-34);
+    ctx.fillStyle=GREEN; ctx.beginPath(); ctx.roundRect(cL+80,H-44,12,12,3); ctx.fill();
+    ctx.fillText('Optiline',cL+96,H-34);
+
+  } else if(type==='cage-kg'){
+    const allCages=Object.values(CAGES).flat();
+    const entries=allCages.map(cid=>({cid,kg:cageMap[cid]?.kg||0}));
+    drawTitle('Feed by Cage (kg) — All Time','Total kilograms per cage across all feeding sessions');
+    drawBars(entries, e=>e.kg, e=>e.cid,
+      (e,i)=>{ const sec=e.cid[0]; return sec==='A'?GREEN:sec==='B'?GOLD:sec==='C'?CORAL:WATER; },
+      'Total kg');
+    // Legend
+    [[GREEN,'Section A'],[GOLD,'Section B'],[CORAL,'Section C'],[WATER,'Section D']].forEach(([col,lbl],i)=>{
+      ctx.fillStyle=col; ctx.beginPath(); ctx.roundRect(cL+i*100,H-44,12,12,3); ctx.fill();
+      ctx.font='12px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='left'; ctx.fillText(lbl,cL+i*100+16,H-34);
+    });
+
+  } else if(type==='daily'){
+    const entries=Object.entries(dailyMap).map(([d,kg])=>({d,kg}));
+    drawTitle('Daily Feed History — Last 14 Days','kg of feed dispensed per day');
+    drawBars(entries, e=>e.kg, e=>e.d, ()=>GREEN, 'kg per day');
+
+    // Footer + download for bar charts
+    ctx.fillStyle='rgba(26,58,42,0.7)'; ctx.fillRect(0,H-24,W,24);
+    ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+    ctx.fillText('Heritage Fish Company — Cage Feed Management System · Lake Victoria',W/2,H-9);
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL('image/png');
+    a.download=`HFC_chart_${type}_${new Date().toISOString().slice(0,10)}.png`;
+    a.click();
+    closeDlModal();
+    toast('Chart downloaded!');
+    return;
+
+  } else if(type==='cage-summary'){
+    const allTimeCageMap={};
+    const allTimeCageDates={};
+    logs.forEach(l=>{
+      if(!l.cages) return;
+      const d=new Date(l.ts);
+      l.feeds.forEach(f=>{
+        const kg=f.qty*f.kg;
+        l.cages.forEach(c=>{
+          if(!allTimeCageMap[c]) allTimeCageMap[c]=0;
+          allTimeCageMap[c]+=+(kg/l.cages.length).toFixed(2);
+          if(!allTimeCageDates[c]) allTimeCageDates[c]={first:d,last:d};
+          if(d<allTimeCageDates[c].first) allTimeCageDates[c].first=d;
+          if(d>allTimeCageDates[c].last)  allTimeCageDates[c].last=d;
+        });
+      });
+    });
+    const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+    drawCageSummaryPNG(canvas, allTimeCageMap, allTimeCageDates,
+      'All-Time Cage Feed Summary',
+      'Total kg per cage · from first session to today · '+today,
+      `HFC_CageSummary_AllTime_${new Date().toISOString().slice(0,10)}.png`);
+    closeDlModal();
+    toast('✓ All-time cage summary downloaded!');
+    return;
+  }
+
+  // Footer + download (for other bar chart types)
+  ctx.fillStyle='rgba(26,58,42,0.7)'; ctx.fillRect(0,H-24,W,24);
+  ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+  ctx.fillText('Heritage Fish Company — Cage Feed Management System · Lake Victoria',W/2,H-9);
+  const a=document.createElement('a');
+  a.href=canvas.toDataURL('image/png');
+  a.download=`HFC_chart_${type}_${new Date().toISOString().slice(0,10)}.png`;
+  a.click();
+  closeDlModal();
+  toast('Chart downloaded!');
+};
+
+
+
+// ====================== MONTHLY CHART DOWNLOAD ======================
+window.openMonthlyChartModal = function(){
+  const monthVal = document.getElementById('rpt-month').value;
+  if(!monthVal){ toast('⚠ Please select a month first.'); return; }
+  const [yr,mo] = monthVal.split('-').map(Number);
+  const monthName = new Date(yr,mo-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  document.getElementById('mcm-sub').textContent = `Month: ${monthName} · Select chart to export as PNG`;
+  document.getElementById('monthly-chart-overlay').classList.remove('hidden');
+};
+
+window.closeMonthlyChartModal = function(){
+  document.getElementById('monthly-chart-overlay').classList.add('hidden');
+};
+
+window.doDownloadMonthlyChart = function(){
+  const type     = document.querySelector('input[name="mcm-type"]:checked').value;
+  const monthVal = document.getElementById('rpt-month').value;
+  const cageFilter = document.getElementById('rpt-cage').value;
+  if(!monthVal){ toast('⚠ No month selected.'); return; }
+
+  const [yr,mo]    = monthVal.split('-').map(Number);
+  const monthStart = new Date(yr, mo-1, 1);
+  const monthEnd   = new Date(yr, mo, 1);
+  const monthName  = monthStart.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+
+  // Filter logs to this month (+optional cage)
+  const monthLogs = logs.filter(l => {
+    if(!l.cages) return false;
+    const d = new Date(l.ts);
+    if(d < monthStart || d >= monthEnd) return false;
+    if(cageFilter && !l.cages.includes(cageFilter)) return false;
+    return true;
+  });
+
+  // Canvas setup
+  const W=960, H=580;
+  const canvas = document.getElementById('mcm-canvas');
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+
+  // Colour palette (matches app theme)
+  const BG='#112b1e', BORDER='rgba(200,168,75,0.25)';
+  const GOLD='#c8a84b', GOLD2='#e8c96a', GREEN='#4caf7d', WATER='#2d7d9a';
+  const AMBER='#f0a04b', CORAL='#e07060', TEXT='#e8dfc8', MUTED='#8aab90';
+
+  // Background
+  ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+  const bgGr=ctx.createLinearGradient(0,0,W,H);
+  bgGr.addColorStop(0,'rgba(45,125,154,0.06)'); bgGr.addColorStop(1,'rgba(76,175,125,0.04)');
+  ctx.fillStyle=bgGr; ctx.fillRect(0,0,W,H);
+
+  // Header band
+  ctx.fillStyle='rgba(26,58,42,0.95)'; ctx.fillRect(0,0,W,68);
+  ctx.fillStyle=BORDER; ctx.fillRect(0,67,W,1);
+  ctx.fillStyle='rgba(200,168,75,0.15)'; ctx.beginPath(); ctx.roundRect(20,10,48,48,10); ctx.fill();
+  ctx.font='26px serif'; ctx.fillText('🐟',27,44);
+  ctx.font=`bold 16px Georgia, serif`; ctx.fillStyle=GOLD2; ctx.textAlign='left';
+  ctx.fillText('Heritage Fish Company',78,30);
+  ctx.font='11px sans-serif'; ctx.fillStyle=MUTED;
+  ctx.fillText('Cage Feed Management · Lake Victoria · Tilapia',78,48);
+  // Month badge (top right)
+  ctx.fillStyle='rgba(200,168,75,0.12)';
+  ctx.beginPath(); ctx.roundRect(W-200,14,180,40,8); ctx.fill();
+  ctx.font='bold 12px sans-serif'; ctx.fillStyle=GOLD; ctx.textAlign='center';
+  ctx.fillText(monthName + (cageFilter?' · '+cageFilter:''), W-110, 30);
+  ctx.font='10px monospace'; ctx.fillStyle=MUTED;
+  ctx.fillText('Generated: '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}), W-110, 46);
+  ctx.textAlign='left';
+
+  // Chart area
+  const cL=70, cT=110, cR=W-30, cB=H-70;
+  const cW=cR-cL, cH=cB-cT;
+
+  function drawGrid(maxV,steps=5){
+    for(let i=0;i<=steps;i++){
+      const y=cB-(i/steps)*cH;
+      ctx.beginPath(); ctx.moveTo(cL,y); ctx.lineTo(cR,y);
+      ctx.setLineDash([3,5]); ctx.strokeStyle='rgba(200,168,75,0.1)'; ctx.lineWidth=1; ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font='11px monospace'; ctx.fillStyle=MUTED; ctx.textAlign='right';
+      ctx.fillText(Math.round(maxV*i/steps).toLocaleString(), cL-8, y+4);
+    }
+    ctx.beginPath(); ctx.moveTo(cL,cT-10); ctx.lineTo(cL,cB); ctx.lineTo(cR,cB);
+    ctx.strokeStyle='rgba(200,168,75,0.25)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.textAlign='left';
+  }
+
+  function drawChartTitle(t,sub){
+    ctx.font=`bold 15px Georgia, serif`; ctx.fillStyle=TEXT; ctx.textAlign='left';
+    ctx.fillText(t, cL, cT-22);
+    if(sub){ ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.fillText(sub, cL, cT-8); }
+  }
+
+  function drawBars(entries, valFn, labelFn, colorFn, yLabel){
+    if(!entries.length){
+      ctx.font='14px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+      ctx.fillText('No data for this month.', W/2, H/2); return;
+    }
+    const maxV=Math.max(...entries.map(valFn),1);
+    drawGrid(maxV);
+    const gap=cW/entries.length;
+    const bw=Math.min(54, gap*0.65);
+    entries.forEach((e,i)=>{
+      const v=valFn(e); const bh=Math.max((v/maxV)*cH, v>0?2:0);
+      const x=cL+gap*i+gap/2-bw/2; const y=cB-bh;
+      const col=colorFn(e,i);
+      const gr=ctx.createLinearGradient(x,y,x,cB);
+      gr.addColorStop(0,col); gr.addColorStop(1,col+'33');
+      ctx.beginPath(); ctx.roundRect(x,y,bw,bh,[5,5,0,0]); ctx.fillStyle=gr; ctx.fill();
+      if(bh>20){ ctx.font='bold 11px monospace'; ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.fillText(v.toLocaleString(),x+bw/2,y+15); }
+      else if(v>0){ ctx.font='bold 11px monospace'; ctx.fillStyle=col; ctx.textAlign='center'; ctx.fillText(v.toLocaleString(),x+bw/2,y-6); }
+      ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+      const lbl=labelFn(e);
+      const words=lbl.split(' ');
+      if(words.length>1 && ctx.measureText(lbl).width>bw+16){
+        ctx.fillText(words[0],x+bw/2,cB+16);
+        ctx.fillText(words.slice(1).join(' '),x+bw/2,cB+29);
+      } else { ctx.fillText(lbl,x+bw/2,cB+16); }
+    });
+    ctx.save(); ctx.translate(18,cT+cH/2); ctx.rotate(-Math.PI/2);
+    ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+    ctx.fillText(yLabel,0,0); ctx.restore();
+  }
+
+  // Build data from monthLogs
+  const feedMap={}, cageMap={}, dailyMap={};
+  monthLogs.forEach(l=>{
+    if(!l.cages) return;
+    const dayKey=new Date(l.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    l.feeds.forEach(f=>{
+      const kg=f.qty*f.kg;
+      if(!feedMap[f.id]) feedMap[f.id]={label:f.label+' '+f.size,bags:0,kg:0,type:f.type};
+      feedMap[f.id].bags+=f.qty; feedMap[f.id].kg+=kg;
+      const cagesInSession = cageFilter ? l.cages.filter(c=>c===cageFilter) : l.cages;
+      cagesInSession.forEach(c=>{
+        if(!cageMap[c]) cageMap[c]={kg:0};
+        cageMap[c].kg += +(kg/l.cages.length).toFixed(2);
+      });
+    });
+    if(!dailyMap[dayKey]) dailyMap[dayKey]=0;
+    dailyMap[dayKey]+=l.feeds.reduce((s,f)=>s+f.qty*f.kg,0);
+  });
+
+  if(type==='monthly-feed-kg'){
+    const entries=FEEDS.map(f=>({f,kg:feedMap[f.id]?.kg||0})).filter(e=>e.kg>0);
+    drawChartTitle(`Feed by Weight (kg) — ${monthName}`,'Total kilograms dispensed per feed type this month');
+    drawBars(entries, e=>e.kg, e=>e.f.label+' '+e.f.size, e=>e.f.type==='growel'?AMBER:GREEN, 'Total kg');
+    ctx.fillStyle=AMBER; ctx.beginPath(); ctx.roundRect(cL,H-44,12,12,3); ctx.fill();
+    ctx.font='12px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='left'; ctx.fillText('Growel',cL+16,H-34);
+    ctx.fillStyle=GREEN; ctx.beginPath(); ctx.roundRect(cL+80,H-44,12,12,3); ctx.fill();
+    ctx.fillText('Optiline',cL+96,H-34);
+
+  } else if(type==='monthly-feed-bags'){
+    const entries=FEEDS.map(f=>({f,bags:feedMap[f.id]?.bags||0})).filter(e=>e.bags>0);
+    drawChartTitle(`Bags Used by Feed Type — ${monthName}`,'Total bags consumed per feed type this month');
+    drawBars(entries, e=>e.bags, e=>e.f.label+' '+e.f.size, e=>e.f.type==='growel'?AMBER:GREEN, 'Bags Used');
+    ctx.fillStyle=AMBER; ctx.beginPath(); ctx.roundRect(cL,H-44,12,12,3); ctx.fill();
+    ctx.font='12px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='left'; ctx.fillText('Growel',cL+16,H-34);
+    ctx.fillStyle=GREEN; ctx.beginPath(); ctx.roundRect(cL+80,H-44,12,12,3); ctx.fill();
+    ctx.fillText('Optiline',cL+96,H-34);
+
+  } else if(type==='monthly-cage-kg'){
+    const allCages=Object.values(CAGES).flat();
+    const entries=allCages.map(cid=>({cid,kg:cageMap[cid]?.kg||0})).filter(e=>cageFilter?e.cid===cageFilter:true);
+    drawChartTitle(`Feed by Cage (kg) — ${monthName}`,'Total kilograms per cage this month');
+    drawBars(entries, e=>e.kg, e=>e.cid,
+      e=>{ const s=e.cid[0]; return s==='A'?GREEN:s==='B'?GOLD:s==='C'?CORAL:WATER; }, 'Total kg');
+    [[GREEN,'Section A'],[GOLD,'Section B'],[CORAL,'Section C'],[WATER,'Section D']].forEach(([col,lbl],i)=>{
+      ctx.fillStyle=col; ctx.beginPath(); ctx.roundRect(cL+i*100,H-44,12,12,3); ctx.fill();
+      ctx.font='12px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='left'; ctx.fillText(lbl,cL+i*100+16,H-34);
+    });
+
+  } else if(type==='monthly-daily'){
+    const entries=Object.entries(dailyMap).map(([d,kg])=>({d,kg}));
+    drawChartTitle(`Daily Feed Activity — ${monthName}`,'kg of feed dispensed per day this month');
+    drawBars(entries, e=>e.kg, e=>e.d, ()=>GREEN, 'kg per day');
+
+    ctx.fillStyle='rgba(26,58,42,0.7)'; ctx.fillRect(0,H-24,W,24);
+    ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+    ctx.fillText('Heritage Fish Company — Cage Feed Management System · Lake Victoria',W/2,H-9);
+    const safeMonth=monthVal.replace('-','_');
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL('image/png');
+    a.download=`HFC_chart_${safeMonth}${cageFilter?'_'+cageFilter:''}_daily.png`;
+    a.click();
+    closeMonthlyChartModal();
+    toast(`✓ Chart downloaded for ${monthName}!`);
+    return;
+
+  } else if(type==='monthly-cage-summary'){
+    const monthlyCageMap={};
+    const monthlyCageDates={};
+    monthLogs.forEach(l=>{
+      if(!l.cages) return;
+      const d = new Date(l.ts);
+      l.feeds.forEach(f=>{
+        const kg=f.qty*f.kg;
+        const cagesInSess = cageFilter ? l.cages.filter(c=>c===cageFilter) : l.cages;
+        cagesInSess.forEach(c=>{
+          if(!monthlyCageMap[c]) monthlyCageMap[c]=0;
+          monthlyCageMap[c]+=+(kg/l.cages.length).toFixed(2);
+          if(!monthlyCageDates[c]) monthlyCageDates[c]={first:d,last:d};
+          if(d<monthlyCageDates[c].first) monthlyCageDates[c].first=d;
+          if(d>monthlyCageDates[c].last)  monthlyCageDates[c].last=d;
+        });
+      });
+    });
+    const safeMonth=monthVal.replace('-','_');
+    drawCageSummaryPNG(canvas, monthlyCageMap, monthlyCageDates,
+      `Cage Feed Summary — ${monthName}`,
+      `Total kg per cage · ${monthName}${cageFilter?' · Cage '+cageFilter:''}`,
+      `HFC_CageSummary_${safeMonth}${cageFilter?'_'+cageFilter:''}.png`);
+    closeMonthlyChartModal();
+    toast(`✓ Cage summary downloaded for ${monthName}!`);
+    return;
+
+  } else if(type==='alltime-cage-summary'){
+    // ALL logs — no date filter at all
+    const atCageMap={};
+    const atCageDates={};
+    logs.forEach(l=>{
+      if(!l.cages) return;
+      const d = new Date(l.ts);
+      l.feeds.forEach(f=>{
+        const kg=f.qty*f.kg;
+        l.cages.forEach(c=>{
+          if(!atCageMap[c]) atCageMap[c]=0;
+          atCageMap[c]+=+(kg/l.cages.length).toFixed(2);
+          if(!atCageDates[c]) atCageDates[c]={first:d,last:d};
+          if(d<atCageDates[c].first) atCageDates[c].first=d;
+          if(d>atCageDates[c].last)  atCageDates[c].last=d;
+        });
+      });
+    });
+    const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+    drawCageSummaryPNG(canvas, atCageMap, atCageDates,
+      'All-Time Cage Feed Summary',
+      'Total kg per cage · from first session to today · '+today,
+      `HFC_CageSummary_AllTime_${new Date().toISOString().slice(0,10)}.png`);
+    closeMonthlyChartModal();
+    toast('✓ All-time cage summary downloaded!');
+    return;
+  }
+
+  // Footer + download for remaining bar chart types
+  ctx.fillStyle='rgba(26,58,42,0.7)'; ctx.fillRect(0,H-24,W,24);
+  ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+  ctx.fillText('Heritage Fish Company — Cage Feed Management System · Lake Victoria',W/2,H-9);
+  const safeMonth = monthVal.replace('-','_');
+  const a=document.createElement('a');
+  a.href=canvas.toDataURL('image/png');
+  a.download=`HFC_chart_${safeMonth}${cageFilter?'_'+cageFilter:''}_${type.replace('monthly-','')}.png`;
+  a.click();
+  closeMonthlyChartModal();
+  toast(`✓ Chart downloaded for ${monthName}!`);
+};
+
+
+
+// ====================== CAGE SUMMARY PNG ======================
+function drawCageSummaryPNG(canvas, cageDataMap, cageDateMap, titleLine, subLine, filename){
+  const allCages = Object.values(CAGES).flat();
+  const sections = Object.entries(CAGES);
+
+  // ── Colours ──────────────────────────────────────────────
+  const BG    = '#0e2318', PANEL = '#162e22', PANEL2 = '#1a3828';
+  const GOLD  = '#c8a84b', GOLD2 = '#e8c96a', GOLD_F = 'rgba(200,168,75,0.13)';
+  const GREEN = '#4caf7d', WATER = '#2d7d9a', AMBER = '#f0a04b', CORAL = '#e07060';
+  const TEXT  = '#e8dfc8', MUTED = '#7a9e82', DIM = '#3d6650';
+  const SEC_COL = {A:GREEN, B:GOLD, C:CORAL, D:WATER};
+  const SEC_BG  = {
+    A:'rgba(76,175,125,0.09)', B:'rgba(200,168,75,0.09)',
+    C:'rgba(224,112,96,0.09)', D:'rgba(45,125,154,0.09)'
+  };
+  const SEC_BORDER = {
+    A:'rgba(76,175,125,0.35)', B:'rgba(200,168,75,0.35)',
+    C:'rgba(224,112,96,0.35)', D:'rgba(45,125,154,0.35)'
+  };
+
+  // ── Layout ────────────────────────────────────────────────
+  const W        = 1100;
+  const HEADER_H = 90;
+  const FOOTER_H = 36;
+  const PAD      = 32;
+  const INNER_W  = W - PAD*2;
+
+  // Each section row: label bar + cage cards
+  // All cages in a section on ONE row (max 4 per section, Section D has 4)
+  const CAGE_W   = 220, CAGE_H = 130, CAGE_GAP = 14;
+  const SECT_LABEL_H = 32, SECT_BOTTOM_PAD = 20;
+
+  let H = HEADER_H + PAD;
+  sections.forEach(([sec, cids]) => {
+    H += SECT_LABEL_H + CAGE_H + SECT_BOTTOM_PAD;
+  });
+  // Grand total row
+  H += 64 + FOOTER_H + PAD;
+
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // ── Background ────────────────────────────────────────────
+  ctx.fillStyle = BG; ctx.fillRect(0,0,W,H);
+  const bgGr = ctx.createLinearGradient(0,0,W,H);
+  bgGr.addColorStop(0,'rgba(45,125,154,0.06)');
+  bgGr.addColorStop(1,'rgba(76,175,125,0.04)');
+  ctx.fillStyle = bgGr; ctx.fillRect(0,0,W,H);
+
+  // ── Header ────────────────────────────────────────────────
+  ctx.fillStyle = PANEL; ctx.fillRect(0,0,W,HEADER_H);
+  ctx.fillStyle = 'rgba(200,168,75,0.18)'; ctx.fillRect(0,HEADER_H-1,W,1);
+
+  // Logo pill
+  ctx.fillStyle = GOLD_F;
+  ctx.beginPath(); ctx.roundRect(PAD,16,52,52,12); ctx.fill();
+  ctx.strokeStyle='rgba(200,168,75,0.3)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(PAD,16,52,52,12); ctx.stroke();
+  ctx.font='28px serif'; ctx.textAlign='left'; ctx.fillText('🐟', PAD+12, 52);
+
+  ctx.font='bold 18px Georgia,serif'; ctx.fillStyle=GOLD2;
+  ctx.fillText('Heritage Fish Company', PAD+66, 38);
+  ctx.font='12px sans-serif'; ctx.fillStyle=MUTED;
+  ctx.fillText('Cage Feed Management · Lake Victoria · Tilapia', PAD+66, 58);
+
+  // Right-side title block
+  ctx.textAlign='right';
+  ctx.font='bold 15px Georgia,serif'; ctx.fillStyle=TEXT;
+  ctx.fillText(titleLine, W-PAD, 34);
+  ctx.font='11px sans-serif'; ctx.fillStyle=MUTED;
+  ctx.fillText(subLine, W-PAD, 52);
+  ctx.font='10px monospace'; ctx.fillStyle=DIM;
+  ctx.fillText('Generated: '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}), W-PAD, 68);
+  ctx.textAlign='left';
+
+  // ── Section rows ─────────────────────────────────────────
+  const maxKg = Math.max(...allCages.map(c=>cageDataMap[c]||0), 1);
+  let curY = HEADER_H + PAD;
+  let grandTotal = 0;
+
+  sections.forEach(([sec, cids]) => {
+    const secCol    = SEC_COL[sec];
+    const secBg     = SEC_BG[sec];
+    const secBorder = SEC_BORDER[sec];
+
+    // Section label bar
+    ctx.fillStyle = secBg;
+    ctx.beginPath(); ctx.roundRect(PAD, curY, INNER_W, SECT_LABEL_H, 6); ctx.fill();
+    ctx.strokeStyle = secBorder; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(PAD, curY, INNER_W, SECT_LABEL_H, 6); ctx.stroke();
+
+    // Section label text
+    ctx.font='bold 11px sans-serif'; ctx.fillStyle=secCol;
+    ctx.fillText(`SECTION  ${sec}`, PAD+14, curY+20);
+
+    // Section total (right side of label bar)
+    const secTotal = cids.reduce((s,c)=>s+(cageDataMap[c]||0),0);
+    grandTotal += secTotal;
+    ctx.textAlign='right';
+    ctx.font='bold 12px monospace'; ctx.fillStyle=secCol;
+    ctx.fillText(`${secTotal.toLocaleString()} kg  ·  ${(secTotal/1000).toFixed(2)} t`, PAD+INNER_W-12, curY+20);
+    ctx.textAlign='left';
+
+    curY += SECT_LABEL_H + 10;
+
+    // Distribute cage cards evenly across full width
+    const totalCardW = cids.length * CAGE_W + (cids.length-1) * CAGE_GAP;
+    const startX = PAD + (INNER_W - totalCardW) / 2;
+
+    cids.forEach((cid, i) => {
+      const kg      = Math.round(cageDataMap[cid] || 0);
+      const tonnes  = (kg/1000).toFixed(2);
+      const isEmpty = kg === 0;
+      const cx      = startX + i*(CAGE_W + CAGE_GAP);
+      const cy      = curY;
+      const pct     = kg / maxKg;
+
+      // Card bg
+      ctx.fillStyle = isEmpty ? 'rgba(14,35,24,0.7)' : secBg;
+      ctx.beginPath(); ctx.roundRect(cx,cy,CAGE_W,CAGE_H,10); ctx.fill();
+      ctx.strokeStyle = isEmpty ? 'rgba(255,255,255,0.06)' : secBorder;
+      ctx.lineWidth = isEmpty ? 0.8 : 1.5;
+      ctx.beginPath(); ctx.roundRect(cx,cy,CAGE_W,CAGE_H,10); ctx.stroke();
+
+      // Cage ID — top left
+      ctx.font='bold 20px Georgia,serif';
+      ctx.fillStyle = isEmpty ? DIM : secCol;
+      ctx.textAlign='left';
+      ctx.fillText(cid, cx+14, cy+28);
+
+      if(isEmpty){
+        ctx.font='11px sans-serif'; ctx.fillStyle=DIM;
+        ctx.fillText('— no data —', cx+14, cy+56);
+        ctx.font='10px monospace'; ctx.fillStyle=DIM;
+        ctx.fillText('0 kg', cx+14, cy+74);
+      } else {
+        // kg value — large and bold
+        ctx.font='bold 28px Georgia,serif'; ctx.fillStyle=TEXT;
+        ctx.fillText(kg.toLocaleString(), cx+14, cy+62);
+        // kg unit
+        ctx.font='12px sans-serif'; ctx.fillStyle=MUTED;
+        ctx.fillText('kg', cx+14+ctx.measureText(kg.toLocaleString()).width+6, cy+62);
+        // tonnes
+        ctx.font='bold 11px monospace'; ctx.fillStyle=secCol;
+        ctx.fillText('= '+tonnes+' t', cx+14, cy+79);
+        // Date range  e.g. "Nov 2024 → Apr 2026"
+        if(cageDateMap && cageDateMap[cid]){
+          const fmt = d => d.toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+          const dr  = cageDateMap[cid];
+          const rangeStr = fmt(dr.first) === fmt(dr.last)
+            ? fmt(dr.first)
+            : fmt(dr.first)+' → '+fmt(dr.last);
+          ctx.font='9px monospace'; ctx.fillStyle=secCol+'99';
+          ctx.fillText(rangeStr, cx+14, cy+93);
+        }
+      }
+
+      // Progress bar track
+      const barY  = cy + CAGE_H - 16;
+      const barW  = CAGE_W - 28;
+      ctx.fillStyle='rgba(255,255,255,0.05)';
+      ctx.beginPath(); ctx.roundRect(cx+14, barY, barW, 6, 3); ctx.fill();
+      if(kg>0){
+        const grad = ctx.createLinearGradient(cx+14, barY, cx+14+barW*pct, barY);
+        grad.addColorStop(0, secCol+'cc'); grad.addColorStop(1, secCol+'55');
+        ctx.fillStyle=grad;
+        ctx.beginPath(); ctx.roundRect(cx+14, barY, barW*pct, 6, 3); ctx.fill();
+      }
+
+      // Pct label (top right of card)
+      if(kg>0){
+        ctx.font='10px monospace'; ctx.fillStyle=secCol+'99'; ctx.textAlign='right';
+        ctx.fillText((pct*100).toFixed(0)+'%', cx+CAGE_W-10, cy+18);
+        ctx.textAlign='left';
+      }
+    });
+
+    curY += CAGE_H + SECT_BOTTOM_PAD;
+  });
+
+  // ── Grand total bar ───────────────────────────────────────
+  curY += 4;
+  ctx.fillStyle=GOLD_F;
+  ctx.beginPath(); ctx.roundRect(PAD, curY, INNER_W, 52, 10); ctx.fill();
+  ctx.strokeStyle='rgba(200,168,75,0.3)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.roundRect(PAD, curY, INNER_W, 52, 10); ctx.stroke();
+
+  ctx.font='bold 13px sans-serif'; ctx.fillStyle=MUTED;
+  ctx.fillText('GRAND TOTAL — ALL CAGES', PAD+18, curY+20);
+  ctx.font='bold 22px Georgia,serif'; ctx.fillStyle=GOLD2;
+  ctx.fillText(grandTotal.toLocaleString()+' kg', PAD+18, curY+44);
+
+  ctx.textAlign='right';
+  ctx.font='bold 13px sans-serif'; ctx.fillStyle=MUTED;
+  ctx.fillText('TOTAL TONNES', W-PAD-18, curY+20);
+  ctx.font='bold 22px Georgia,serif'; ctx.fillStyle=GOLD2;
+  ctx.fillText((grandTotal/1000).toFixed(3)+' t', W-PAD-18, curY+44);
+  ctx.textAlign='left';
+
+  curY += 52;
+
+  // ── Footer ────────────────────────────────────────────────
+  ctx.fillStyle=PANEL; ctx.fillRect(0, H-FOOTER_H, W, FOOTER_H);
+  ctx.fillStyle='rgba(200,168,75,0.15)'; ctx.fillRect(0, H-FOOTER_H, W, 1);
+  ctx.font='11px sans-serif'; ctx.fillStyle=MUTED; ctx.textAlign='center';
+  ctx.fillText('Heritage Fish Company — Cage Feed Management System · Lake Victoria', W/2, H-11);
+
+  // ── Download ──────────────────────────────────────────────
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = filename;
+  a.click();
+}
+
+
+
+// ====================== FEED USAGE SUMMARY ======================
+window.renderFeedUsage = function(){
+  const monthVal   = document.getElementById('rpt-month').value;
+  const cageFilter = document.getElementById('rpt-cage').value;
+  const totalsEl   = document.getElementById('fus-totals-bar');
+  const cardsEl    = document.getElementById('fus-cards-grid');
+
+  if(!monthVal){
+    totalsEl.innerHTML='';
+    cardsEl.innerHTML='<div class="fus-no-data">Select a month to see feed usage.</div>';
+    return;
+  }
+
+  const [yr,mo]    = monthVal.split('-').map(Number);
+  const monthStart = new Date(yr, mo-1, 1);
+  const monthEnd   = new Date(yr, mo, 1);
+  const monthName  = monthStart.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+
+  // Filter logs
+  const monthLogs = logs.filter(l => {
+    if(!l.cages) return false;
+    const d = new Date(l.ts);
+    if(d < monthStart || d >= monthEnd) return false;
+    if(cageFilter && !l.cages.includes(cageFilter)) return false;
+    return true;
+  });
+
+  if(!monthLogs.length){
+    totalsEl.innerHTML='';
+    cardsEl.innerHTML=`<div class="fus-no-data">No feeding records found for <strong style="color:var(--gold)">${monthName}</strong>${cageFilter?' · Cage '+cageFilter:''}.</div>`;
+    return;
+  }
+
+  // Aggregate per feed (label + size)
+  const feedMap = {}; // key: "label||size" -> {label,size,type,bags,kg,sessions}
+  let grandBags=0, grandKg=0;
+
+  monthLogs.forEach(l => {
+    const sessionId = l.firestoreId || l.ts;
+    l.feeds.forEach(f => {
+      if(!f.qty || f.qty===0) return;
+      const fkey = `${f.label}||${f.size}`;
+      const kg   = f.qty * f.kg;
+      grandBags += f.qty;
+      grandKg   += kg;
+      if(!feedMap[fkey]) feedMap[fkey] = {label:f.label, size:f.size, type:f.type, bags:0, kg:0, sessions:0};
+      feedMap[fkey].bags    += f.qty;
+      feedMap[fkey].kg      += kg;
+      feedMap[fkey].sessions++;
+    });
+  });
+
+  const entries = Object.values(feedMap).sort((a,b)=>b.bags-a.bags);
+  if(!entries.length){
+    cardsEl.innerHTML='<div class="fus-no-data">No feed data found.</div>';
+    return;
+  }
+
+  const maxBags = Math.max(...entries.map(e=>e.bags),1);
+
+  // Totals bar
+  totalsEl.innerHTML = `
+    <div class="fus-total-bar">
+      <div class="fus-total-row">
+        <div class="fus-total-item">
+          <div class="fus-total-lbl">Month</div>
+          <div class="fus-total-val">${monthName}</div>
+        </div>
+        <div style="width:1px;background:var(--border);height:36px;"></div>
+        <div class="fus-total-item">
+          <div class="fus-total-lbl">Total Bags Used</div>
+          <div class="fus-total-val">${grandBags.toLocaleString()} bags</div>
+        </div>
+        <div style="width:1px;background:var(--border);height:36px;"></div>
+        <div class="fus-total-item">
+          <div class="fus-total-lbl">Total kg Dispensed</div>
+          <div class="fus-total-val">${grandKg.toLocaleString()} kg</div>
+        </div>
+        <div style="width:1px;background:var(--border);height:36px;"></div>
+        <div class="fus-total-item">
+          <div class="fus-total-lbl">Feed Types Used</div>
+          <div class="fus-total-val">${entries.length}</div>
+        </div>
+        <div style="width:1px;background:var(--border);height:36px;"></div>
+        <div class="fus-total-item">
+          <div class="fus-total-lbl">Sessions</div>
+          <div class="fus-total-val">${monthLogs.length}</div>
+        </div>
+      </div>
+    </div>`;
+
+  // Feed cards — one per feed type
+  cardsEl.innerHTML = entries.map(e => {
+    const pct = (e.bags / maxBags * 100).toFixed(1);
+    const tonnes = (e.kg / 1000).toFixed(3);
+    const kgPerBag = e.bags > 0 ? (e.kg / e.bags).toFixed(1) : 0;
+    const pctOfTotal = grandBags > 0 ? (e.bags / grandBags * 100).toFixed(1) : 0;
+    return `
+      <div class="fus-card">
+        <div class="fus-brand ${e.type}">${e.label}</div>
+        <div class="fus-size">${e.size}</div>
+        <div class="fus-stat-row">
+          <div class="fus-stat">
+            <div class="fus-stat-lbl">Bags Used</div>
+            <div class="fus-stat-val">${e.bags}</div>
+            <div class="fus-stat-unit">bags · ${pctOfTotal}% of total</div>
+          </div>
+          <div class="fus-stat">
+            <div class="fus-stat-lbl">Total kg</div>
+            <div class="fus-stat-val">${e.kg.toLocaleString()}</div>
+            <div class="fus-stat-unit">kg · ${tonnes} t</div>
+          </div>
+        </div>
+        <div class="fus-bar-wrap">
+          <div class="fus-bar ${e.type}" style="width:${pct}%"></div>
+        </div>
+        <div class="fus-sessions">${kgPerBag} kg/bag · ${e.sessions} session${e.sessions!==1?'s':''}</div>
+      </div>`;
+  }).join('');
+};
+
+window.downloadFeedUsageCSV = function(){
+  const monthVal   = document.getElementById('rpt-month').value;
+  const cageFilter = document.getElementById('rpt-cage').value;
+  if(!monthVal){ toast('⚠ Please select a month first.'); return; }
+
+  const [yr,mo]    = monthVal.split('-').map(Number);
+  const monthStart = new Date(yr, mo-1, 1);
+  const monthEnd   = new Date(yr, mo, 1);
+  const monthName  = monthStart.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  const today      = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  const monthLogs = logs.filter(l => {
+    if(!l.cages) return false;
+    const d = new Date(l.ts);
+    if(d < monthStart || d >= monthEnd) return false;
+    if(cageFilter && !l.cages.includes(cageFilter)) return false;
+    return true;
+  });
+
+  if(!monthLogs.length){ toast('⚠ No data for this selection.'); return; }
+
+  const feedMap = {};
+  let grandBags=0, grandKg=0;
+  monthLogs.forEach(l => {
+    l.feeds.forEach(f => {
+      if(!f.qty||f.qty===0) return;
+      const fkey = `${f.label}||${f.size}`;
+      const kg   = f.qty * f.kg;
+      grandBags += f.qty; grandKg += kg;
+      if(!feedMap[fkey]) feedMap[fkey]={label:f.label,size:f.size,bags:0,kg:0,sessions:0};
+      feedMap[fkey].bags+=f.qty; feedMap[fkey].kg+=kg; feedMap[fkey].sessions++;
+    });
+  });
+
+  const rows = [];
+  rows.push(['Heritage Fish Company — Feed Usage Summary']);
+  rows.push([`Month: ${monthName}`, cageFilter?`Cage: ${cageFilter}`:'All Cages', `Generated: ${today}`]);
+  rows.push([]);
+  rows.push(['Feed Brand','Feed Size','Bags Used','Total kg','Tonnes','kg per Bag','% of Total Bags','Sessions']);
+  Object.values(feedMap).sort((a,b)=>b.bags-a.bags).forEach(f=>{
+    rows.push([
+      f.label, f.size, f.bags, +f.kg.toFixed(2),
+      +(f.kg/1000).toFixed(3),
+      +(f.kg/f.bags).toFixed(2),
+      +(f.bags/grandBags*100).toFixed(1)+'%',
+      f.sessions
+    ]);
+  });
+  rows.push([]);
+  rows.push(['TOTAL','',grandBags,+grandKg.toFixed(2),+(grandKg/1000).toFixed(3),'','','']);
+
+  const csv  = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const fname = `HFC_FeedUsage_${monthVal}${cageFilter?'_'+cageFilter:''}.csv`;
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download = fname; a.click();
+  toast(`✓ Downloaded ${fname}`);
+};
+
+// ====================== MONTHLY REPORT ======================
+function getMonthOptions(){
+  // Build list of months from logs + last 6 months
+  const monthSet = new Set();
+  logs.forEach(l => {
+    const d = new Date(l.ts);
+    monthSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  });
+  // Always include last 6 months
+  const now = new Date();
+  for(let i=0; i<6; i++){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    monthSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  return [...monthSet].sort((a,b)=>b.localeCompare(a));
+}
+
+function populateMonthlySelectors(){
+  const sel = document.getElementById('rpt-month');
+  const curVal = sel.value;
+  const opts = getMonthOptions();
+  sel.innerHTML = opts.map(m => {
+    const [yr,mo] = m.split('-');
+    const label = new Date(yr, mo-1, 1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+    return `<option value="${m}" ${m===curVal?'selected':''}>${label}</option>`;
+  }).join('');
+  if(!sel.value && opts.length) sel.value = opts[0];
+
+  // Cage filter
+  const cageSel = document.getElementById('rpt-cage');
+  const curCage = cageSel.value;
+  const allCages = Object.values(CAGES).flat();
+  cageSel.innerHTML = '<option value="">All Cages</option>' +
+    Object.entries(CAGES).map(([sec,cids])=>
+      `<optgroup label="Section ${sec}">${cids.map(c=>`<option value="${c}" ${c===curCage?'selected':''}>${c}</option>`).join('')}</optgroup>`
+    ).join('');
+}
+
+window.renderMonthlyReport = function(){
+  populateMonthlySelectors();
+  const monthVal   = document.getElementById('rpt-month').value;
+  const cageFilter = document.getElementById('rpt-cage').value;
+  if(!monthVal){ document.getElementById('monthly-report-content').innerHTML='<div class="no-data-rpt">No month selected.</div>'; return; }
+
+  const [yr,mo]    = monthVal.split('-').map(Number);
+  const monthStart = new Date(yr, mo-1, 1);
+  const monthEnd   = new Date(yr, mo, 1);
+  const monthName  = monthStart.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+
+  // Filter logs for this month (+optional cage)
+  const monthLogs = logs.filter(l => {
+    if(!l.cages) return false;
+    const d = new Date(l.ts);
+    if(d < monthStart || d >= monthEnd) return false;
+    if(cageFilter && !l.cages.includes(cageFilter)) return false;
+    return true;
+  });
+
+  if(!monthLogs.length){
+    document.getElementById('monthly-report-content').innerHTML =
+      `<div class="no-data-rpt">No feeding records found for <strong style="color:var(--gold)">${monthName}</strong>${cageFilter?' · Cage '+cageFilter:''}.</div>`;
+    return;
+  }
+
+  // ---- Aggregate ----
+  // feedSizeMap: overall feed totals (not per-cage, so no multiplication)
+  // cageMap: per cage, per feed-size totals
+  let totalKg=0, totalBags=0;
+  const feedSizeMap = {};
+  const cageMap = {};
+  const uniqueSessions = new Set();
+
+  monthLogs.forEach(l => {
+    uniqueSessions.add(l.firestoreId || l.ts);
+    const nCages = cageFilter ? 1 : l.cages.length;
+
+    l.feeds.forEach(f => {
+      const fkey = `${f.label} ${f.size}`;
+      const kg   = f.qty * f.kg;
+
+      // Overall feed totals — counted once per session (not multiplied by cages)
+      totalKg   += kg;
+      totalBags += f.qty;
+      if(!feedSizeMap[fkey]) feedSizeMap[fkey] = {bags:0, kg:0, type:f.type, label:f.label, size:f.size};
+      feedSizeMap[fkey].bags += f.qty;
+      feedSizeMap[fkey].kg   += kg;
+
+      // Per-cage totals — divide equally among cages in the session
+      const cagesInSession = cageFilter ? l.cages.filter(c=>c===cageFilter) : l.cages;
+      cagesInSession.forEach(c => {
+        if(!cageMap[c]) cageMap[c] = {kg:0, bags:0, sessions:0, byFeedSize:{}};
+        const shareKg   = +(kg / l.cages.length).toFixed(2);
+        const shareBags = +(f.qty / l.cages.length).toFixed(2);
+        cageMap[c].kg   += shareKg;
+        cageMap[c].bags += shareBags;
+        cageMap[c].sessions++;
+        if(!cageMap[c].byFeedSize[fkey]) cageMap[c].byFeedSize[fkey] = {bags:0, kg:0, type:f.type};
+        cageMap[c].byFeedSize[fkey].bags += shareBags;
+        cageMap[c].byFeedSize[fkey].kg   += shareKg;
+      });
+    });
+  });
+
+  const allCages      = Object.values(CAGES).flat();
+  const cagesWithData = allCages.filter(c => (cageFilter ? c===cageFilter : true) && cageMap[c]);
+
+  // Daily feed trend (mini bar inside report)
+  const dailyMap = {};
+  monthLogs.forEach(l => {
+    const dk = new Date(l.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    if(!dailyMap[dk]) dailyMap[dk] = 0;
+    dailyMap[dk] += l.feeds.reduce((s,f)=>s+f.qty*f.kg, 0);
+  });
+  const maxDay = Math.max(...Object.values(dailyMap), 1);
+  const dailyBarsHtml = Object.entries(dailyMap).map(([d,kg])=>`
+    <div class="bar-row">
+      <div class="bar-header">
+        <span style="font-family:var(--mono);font-size:12px;">${d}</span>
+        <span style="font-family:var(--mono);font-weight:600;">${kg.toLocaleString()} kg</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill bar-green" style="width:${(kg/maxDay*100).toFixed(1)}%"></div></div>
+    </div>`).join('');
+
+  // Cage cards
+  const cageCardsHtml = cagesWithData.map(cid => {
+    const data = cageMap[cid];
+    const sec  = cid[0];
+    const feedLines = Object.entries(data.byFeedSize).sort((a,b)=>b[1].kg-a[1].kg).map(([fkey,fd])=>`
+      <div class="cage-feed-line">
+        <span class="cage-feed-name"><span class="tag-${fd.type}">${fkey}</span></span>
+        <span class="cage-feed-val">${fd.bags % 1 === 0 ? fd.bags : fd.bags.toFixed(1)} bags &nbsp;·&nbsp; ${fd.kg.toLocaleString()} kg</span>
+      </div>`).join('');
+    return `
+      <div class="cage-report-card sg-${sec}">
+        <div class="cage-report-id sg-${sec}">${cid}</div>
+        ${feedLines}
+        <div class="cage-total-line">
+          <span class="lbl">Total this month</span>
+          <span class="val">${data.kg.toLocaleString()} kg</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Feed summary table
+  const feedTableRows = Object.entries(feedSizeMap).sort((a,b)=>b[1].kg-a[1].kg).map(([fkey,fd])=>`
+    <tr>
+      <td><span class="tag-${fd.type}">${fd.label}</span></td>
+      <td style="font-family:var(--mono);">${fd.size}</td>
+      <td style="font-family:var(--mono);color:var(--gold);font-weight:600;">${fd.bags}</td>
+      <td style="font-family:var(--mono);font-weight:600;">${fd.kg.toLocaleString()} kg</td>
+    </tr>`).join('');
+
+  document.getElementById('monthly-report-content').innerHTML = `
+    <div class="report-section">
+      <div class="report-section-title">Summary — ${monthName}${cageFilter?' · Cage '+cageFilter:''}</div>
+      <div class="monthly-summary-grid">
+        <div class="rpt-stat"><div class="rpt-stat-lbl">Total Feed Dispensed</div><div class="rpt-stat-val gold-val">${totalKg.toLocaleString()}<span style="font-size:14px"> kg</span></div><div class="rpt-stat-sub">${(totalKg/1000).toFixed(3)} tonnes</div></div>
+        <div class="rpt-stat"><div class="rpt-stat-lbl">Total Bags Used</div><div class="rpt-stat-val green-val">${totalBags}</div><div class="rpt-stat-sub">bags across all feeds</div></div>
+        <div class="rpt-stat"><div class="rpt-stat-lbl">Feeding Sessions</div><div class="rpt-stat-val water-val">${uniqueSessions.size}</div><div class="rpt-stat-sub">records this month</div></div>
+        <div class="rpt-stat"><div class="rpt-stat-lbl">Cages Fed</div><div class="rpt-stat-val amber-val">${cagesWithData.length}</div><div class="rpt-stat-sub">${cageFilter?'filtered view':'of '+Object.values(CAGES).flat().length+' total'}</div></div>
+      </div>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Feed by Type &amp; Size — ${monthName}</div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <table class="feed-size-matrix">
+          <thead><tr><th>Brand</th><th>Size</th><th>Bags Used</th><th>Total kg</th></tr></thead>
+          <tbody>${feedTableRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Daily Feed Activity — ${monthName}</div>
+      <div class="card" style="padding:18px 22px;">
+        ${dailyBarsHtml || '<p style="color:var(--muted);font-size:13px;">No daily data.</p>'}
+      </div>
+    </div>
+
+    <div class="report-section">
+      <div class="report-section-title">Per-Cage Breakdown — ${monthName}</div>
+      <div class="cage-report-grid">${cageCardsHtml || '<div class="no-data-rpt">No cage data for this selection.</div>'}</div>
+    </div>
+  `;
+};
+
+window.downloadMonthlyReport = function(){
+  const monthVal   = document.getElementById('rpt-month').value;
+  const cageFilter = document.getElementById('rpt-cage').value;
+  if(!monthVal){ toast('⚠ Please select a month first.'); return; }
+
+  const [yr,mo]    = monthVal.split('-').map(Number);
+  const monthStart = new Date(yr, mo-1, 1);
+  const monthEnd   = new Date(yr, mo, 1);
+  const monthName  = monthStart.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+
+  const monthLogs = logs.filter(l => {
+    if(!l.cages) return false;
+    const d = new Date(l.ts);
+    if(d < monthStart || d >= monthEnd) return false;
+    if(cageFilter && !l.cages.includes(cageFilter)) return false;
+    return true;
+  });
+
+  if(!monthLogs.length){ toast('⚠ No data for this selection.'); return; }
+
+  // ---- Section 1: Report header ----
+  const rows = [];
+  rows.push(['Heritage Fish Company — Monthly Feed Report']);
+  rows.push([`Month: ${monthName}`, cageFilter?`Cage Filter: ${cageFilter}`:'All Cages', `Generated: ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}`]);
+  rows.push([]);
+
+  // ---- Section 2: Overall feed-size summary ----
+  rows.push(['--- FEED SUMMARY BY TYPE & SIZE ---']);
+  rows.push(['Brand','Size','Bags Used','Total kg']);
+  const feedSizeMap = {};
+  let grandKg=0, grandBags=0;
+  monthLogs.forEach(l => {
+    l.feeds.forEach(f => {
+      const fkey = `${f.label}||${f.size}`;
+      const kg   = f.qty * f.kg;
+      grandKg   += kg; grandBags += f.qty;
+      if(!feedSizeMap[fkey]) feedSizeMap[fkey]={label:f.label,size:f.size,bags:0,kg:0};
+      feedSizeMap[fkey].bags+=f.qty; feedSizeMap[fkey].kg+=kg;
+    });
+  });
+  Object.values(feedSizeMap).sort((a,b)=>b.kg-a.kg)
+    .forEach(f => rows.push([f.label, f.size, f.bags, f.kg]));
+  rows.push(['TOTAL','',grandBags,grandKg]);
+  rows.push([]);
+
+  // ---- Section 3: Per-cage breakdown ----
+  rows.push(['--- PER-CAGE BREAKDOWN ---']);
+  rows.push(['Cage','Feed Brand','Feed Size','Bags (share)','kg (share)','Feeding Sessions']);
+  const cageMap = {};
+  monthLogs.forEach(l => {
+    l.feeds.forEach(f => {
+      const kg   = f.qty * f.kg;
+      const cagesInSession = cageFilter ? l.cages.filter(c=>c===cageFilter) : l.cages;
+      cagesInSession.forEach(c => {
+        const key = `${c}||${f.label}||${f.size}`;
+        if(!cageMap[key]) cageMap[key]={cage:c,label:f.label,size:f.size,bags:0,kg:0,sessions:0};
+        cageMap[key].bags += +(f.qty/l.cages.length).toFixed(3);
+        cageMap[key].kg   += +(kg/l.cages.length).toFixed(2);
+        cageMap[key].sessions++;
+      });
+    });
+  });
+  Object.values(cageMap)
+    .sort((a,b)=> a.cage.localeCompare(b.cage)||a.label.localeCompare(b.label)||a.size.localeCompare(b.size))
+    .forEach(r => rows.push([r.cage, r.label, r.size, +r.bags.toFixed(2), +r.kg.toFixed(2), r.sessions]));
+  rows.push([]);
+
+  // ---- Section 4: Daily log ----
+  rows.push(['--- DAILY FEED LOG ---']);
+  rows.push(['Date','Time','Cage(s)','Feed','Size','Bags','Total kg','Fed By','Notes']);
+  monthLogs.slice().reverse().forEach(l => {
+    const dt=new Date(l.ts);
+    const ds=dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const ts=dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    l.feeds.forEach((f,i)=>{
+      rows.push([
+        i===0?ds:'', i===0?ts:'',
+        i===0?l.cages.join('; '):'',
+        f.label, f.size, f.qty, f.qty*f.kg,
+        i===0?(l.fedBy||''):'', i===0?(l.notes||''):''
+      ]);
+    });
+  });
+
+  const csv  = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const fname = `HFC_Monthly_${monthVal}${cageFilter?'_'+cageFilter:''}.csv`;
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download = fname;
+  a.click();
+  toast(`✓ Downloaded ${fname}`);
+};
+
+
+// ====================== STOCK CHECK ======================
+function populateStockCageFilter(){
+  const sel = document.getElementById('stock-cage');
+  if(!sel) return;
+  const allC = Object.values(CAGES).flat();
+  sel.innerHTML = '<option value="">All Cages</option>' + allC.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+
+window.setStockPreset = function(preset){
+  const now  = new Date();
+  const to   = now.toISOString().slice(0,10);
+  let from;
+  if(preset==='today') from = to;
+  else if(preset==='week'){
+    const d = new Date(now); d.setDate(d.getDate()-6);
+    from = d.toISOString().slice(0,10);
+  } else if(preset==='month'){
+    const d = new Date(now); d.setDate(d.getDate()-29);
+    from = d.toISOString().slice(0,10);
+  }
+  document.getElementById('stock-from').value = from;
+  document.getElementById('stock-to').value   = to;
+  runStockCheck();
+};
+
+window.runStockCheck = function(){
+  const fromVal  = document.getElementById('stock-from').value;
+  const toVal    = document.getElementById('stock-to').value;
+  const cageF    = document.getElementById('stock-cage').value;
+  const sizeF    = document.getElementById('stock-size').value;
+
+  const resultsEl = document.getElementById('stock-results');
+  const emptyEl   = document.getElementById('stock-empty');
+  resultsEl.style.display = 'none';
+  emptyEl.style.display   = 'none';
+
+  if(!fromVal || !toVal){ toast('⚠ Please select both From and To dates.'); return; }
+
+  const fromDate = new Date(fromVal + 'T00:00:00');
+  const toDate   = new Date(toVal   + 'T23:59:59');
+
+  // Filter logs within the date range
+  let filtered = logs.filter(l => {
+    if(!l.cages) return false;
+    const d = new Date(l.ts);
+    if(d < fromDate || d > toDate) return false;
+    if(cageF && !l.cages.includes(cageF)) return false;
+    return true;
+  });
+
+  // If size filter, further filter feeds inside each log
+  // Build flat rows: {date, label, size, qty, kg, cages}
+  const rows = [];
+  filtered.forEach(l => {
+    l.feeds.forEach(f => {
+      if(sizeF && f.size !== sizeF) return;
+      rows.push({
+        ts:    l.ts,
+        label: f.label,
+        size:  f.size,
+        type:  f.type || (f.label.toLowerCase().includes('growel')?'growel':'optiline'),
+        qty:   f.qty,
+        kg:    f.qty * f.kg,
+        cages: l.cages
+      });
+    });
+  });
+
+  if(!rows.length){
+    emptyEl.style.display = '';
+    return;
+  }
+
+  // ---- Aggregate by feed label+size ----
+  const feedMap = {};
+  rows.forEach(r => {
+    const key = `${r.label}||${r.size}`;
+    if(!feedMap[key]) feedMap[key] = { label:r.label, size:r.size, type:r.type, bags:0, kg:0, sessions:0 };
+    feedMap[key].bags     += r.qty;
+    feedMap[key].kg       += r.kg;
+    feedMap[key].sessions += 1;
+  });
+
+  const totalBags = rows.reduce((s,r)=>s+r.qty,0);
+  const totalKg   = rows.reduce((s,r)=>s+r.kg,0);
+  const dateRangeLabel = fromVal===toVal
+    ? new Date(fromVal).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})
+    : `${new Date(fromVal).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} → ${new Date(toVal).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
+
+  // ---- Summary bar ----
+  document.getElementById('stock-summary-bar').innerHTML = `
+    <div class="card" style="padding:18px 22px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:14px;">
+        📅 ${dateRangeLabel}${cageF?' · Cage '+cageF:''}${sizeF?' · '+sizeF+' only':''}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+        <div class="rpt-stat"><div class="rpt-stat-lbl">Total Bags Used</div><div class="rpt-stat-val green-val">${totalBags}</div><div class="rpt-stat-sub">bags across all feed types</div></div>
+        <div class="rpt-stat"><div class="rpt-stat-lbl">Total Feed (kg)</div><div class="rpt-stat-val gold-val">${totalKg.toLocaleString()}</div><div class="rpt-stat-sub">${(totalKg/1000).toFixed(3)} tonnes</div></div>
+        <div class="rpt-stat"><div class="rpt-stat-lbl">Feed Sessions</div><div class="rpt-stat-val water-val">${filtered.length}</div><div class="rpt-stat-sub">records in this range</div></div>
+        <div class="rpt-stat"><div class="rpt-stat-lbl">Feed Types</div><div class="rpt-stat-val amber-val">${Object.keys(feedMap).length}</div><div class="rpt-stat-sub">distinct brand + size combos</div></div>
+      </div>
+    </div>`;
+
+  // ---- Feed cards ----
+  const maxBags = Math.max(...Object.values(feedMap).map(f=>f.bags));
+  document.getElementById('stock-feed-cards').innerHTML = Object.values(feedMap)
+    .sort((a,b) => b.bags - a.bags)
+    .map(f => {
+      const pct = maxBags > 0 ? Math.round((f.bags/maxBags)*100) : 0;
+      return `
+      <div class="fus-card">
+        <div class="fus-brand ${f.type}">${f.label}</div>
+        <div class="fus-size">${f.size}</div>
+        <div class="fus-stat-row">
+          <div class="fus-stat">
+            <div class="fus-stat-lbl">Bags Used</div>
+            <div class="fus-stat-val">${f.bags}</div>
+            <div class="fus-stat-unit">bags</div>
+          </div>
+          <div class="fus-stat">
+            <div class="fus-stat-lbl">Total kg</div>
+            <div class="fus-stat-val" style="font-size:18px;">${f.kg.toLocaleString()}</div>
+            <div class="fus-stat-unit">kg</div>
+          </div>
+        </div>
+        <div class="fus-bar-wrap"><div class="fus-bar ${f.type}" style="width:${pct}%"></div></div>
+        <div class="fus-sessions" style="margin-top:8px;">${f.sessions} feeding session${f.sessions!==1?'s':''}</div>
+      </div>`;
+    }).join('');
+
+  // ---- Daily table ----
+  const sortedRows = [...rows].sort((a,b) => new Date(b.ts) - new Date(a.ts));
+  document.getElementById('stock-daily-tbody').innerHTML = sortedRows.map(r => {
+    const dt = new Date(r.ts);
+    const ds = dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    return `
+      <tr>
+        <td style="font-family:var(--mono);font-size:12px;white-space:nowrap;">${ds}</td>
+        <td><span class="tag-${r.type}">${r.label}</span></td>
+        <td style="font-family:var(--mono);color:var(--gold);">${r.size}</td>
+        <td style="font-family:var(--mono);font-weight:700;color:var(--green);">${r.qty} bags</td>
+        <td style="font-family:var(--mono);">${r.kg.toLocaleString()} kg</td>
+        <td style="font-size:12px;color:var(--muted);">${r.cages.join(', ')}</td>
+      </tr>`;
+  }).join('');
+
+  // Store for CSV download
+  window._stockExportData = { rows: sortedRows, dateRangeLabel, cageF, sizeF, totalBags, totalKg, feedMap };
+
+  resultsEl.style.display = '';
+};
+
+window.downloadStockCSV = function(){
+  const d = window._stockExportData;
+  if(!d){ toast('⚠ Run a stock check first.'); return; }
+  const csvRows = [];
+  csvRows.push(['Heritage Fish Company — Stock Usage Report']);
+  csvRows.push([`Period: ${d.dateRangeLabel}`, d.cageF?`Cage: ${d.cageF}`:'All Cages', d.sizeF?`Size: ${d.sizeF}`:'All Sizes']);
+  csvRows.push([`Total Bags: ${d.totalBags}`, `Total kg: ${d.totalKg}`]);
+  csvRows.push([]);
+  csvRows.push(['--- SUMMARY BY FEED TYPE ---']);
+  csvRows.push(['Brand','Size','Bags Used','Total kg','Sessions']);
+  Object.values(d.feedMap).sort((a,b)=>b.bags-a.bags).forEach(f=>{
+    csvRows.push([f.label, f.size, f.bags, f.kg, f.sessions]);
+  });
+  csvRows.push([]);
+  csvRows.push(['--- DAILY BREAKDOWN ---']);
+  csvRows.push(['Date','Feed Brand','Size','Bags Used','Total kg','Cage(s)']);
+  d.rows.forEach(r=>{
+    const dt = new Date(r.ts);
+    const ds = dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    csvRows.push([ds, r.label, r.size, r.qty, r.kg, r.cages.join('; ')]);
+  });
+  const csv  = csvRows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const fname= `HFC_StockCheck_${new Date().toISOString().slice(0,10)}.csv`;
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = fname;
+  a.click();
+  toast(`✓ Downloaded ${fname}`);
+};
+
+// ====================== INIT ======================
+buildCages();
+buildFeedGrid();
+</script>
+</body>
+</html>
