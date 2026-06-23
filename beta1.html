@@ -304,6 +304,23 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 .fus-dl-btn:hover{background:rgba(200,168,75,0.2);}
 .fus-month-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.25);border-radius:8px;padding:5px 14px;font-size:12px;font-family:var(--mono);color:var(--green);}
 
+/* ======== CLEAR CAGE / TRASH ======== */
+.btn-danger{background:transparent;border:1px solid rgba(224,112,96,0.4);color:var(--coral);border-radius:10px;padding:11px 20px;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+.btn-danger:hover{background:rgba(224,112,96,0.12);border-color:var(--coral);}
+.btn-trash{position:relative;}
+.trash-badge{position:absolute;top:-7px;right:-7px;background:var(--coral);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;min-width:16px;text-align:center;font-family:var(--mono);box-shadow:0 0 0 2px var(--deep);}
+.trash-badge.zero{display:none;}
+.trash-overlay{position:fixed;inset:0;background:rgba(10,25,18,0.85);backdrop-filter:blur(8px);z-index:8500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.trash-overlay.hidden{display:none;}
+.trash-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;width:880px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.trash-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.trash-row-meta{font-size:11px;color:var(--muted);font-family:var(--mono);}
+.restore-btn{background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.35);color:var(--green);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-family:var(--sans);font-weight:600;transition:all 0.15s;margin-right:6px;}
+.restore-btn:hover{background:rgba(76,175,125,0.22);}
+.forever-btn{background:transparent;border:1px solid rgba(224,112,96,0.3);color:var(--coral);border-radius:6px;padding:4px 9px;cursor:pointer;font-size:11px;font-family:var(--sans);transition:all 0.15s;}
+.forever-btn:hover{background:rgba(224,112,96,0.15);}
+.cage-clear-tag{display:inline-block;background:rgba(224,112,96,0.12);color:var(--coral);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-top:3px;}
+
 </style>
 </head>
 <body>
@@ -401,6 +418,37 @@ tbody td{padding:11px 14px;vertical-align:middle;}
       &#8659;&nbsp; Generate &amp; Download PNG
     </button>
     <canvas id="dl-canvas" style="display:none;"></canvas>
+  </div>
+</div>
+
+<!-- ======== RECENTLY DELETED (TRASH) MODAL ======== -->
+<div class="trash-overlay hidden" id="trash-overlay">
+  <div class="trash-box">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title">🗂 Recently Deleted</div>
+        <div class="dl-sub">Deleted records are kept here so nothing is ever truly lost. Restore them or remove them for good.</div>
+      </div>
+      <button class="dl-close" onclick="closeTrashModal()">&#x2715;</button>
+    </div>
+    <div class="trash-actions">
+      <button class="btn-ghost" onclick="downloadTrashCSV()">&#8595; Download Report (CSV)</button>
+      <button class="btn-danger" onclick="emptyTrash()">Empty Trash Permanently</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Cage(s)</th><th>Feed</th><th>Total kg</th><th>Deleted</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="trash-tbody"></tbody>
+      </table>
+    </div>
+    <div id="trash-empty" class="empty" style="display:none">
+      <div class="ico">🗂</div>
+      <p>Nothing in the trash right now.</p>
+    </div>
   </div>
 </div>
 
@@ -502,6 +550,8 @@ tbody td{padding:11px 14px;vertical-align:middle;}
         <option value="month">This Month</option>
       </select>
       <button class="btn-ghost" onclick="exportCSV()">&#8595; Export CSV</button>
+      <button class="btn-danger" onclick="clearCageRecords()">🗑 Clear Cage Records</button>
+      <button class="btn-ghost btn-trash" onclick="openTrashModal()">🗂 Recently Deleted<span class="trash-badge zero" id="trash-badge">0</span></button>
     </div>
     <div class="tbl-wrap">
       <table>
@@ -735,7 +785,7 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getFirestore, collection, addDoc, getDocs, deleteDoc, doc,
-  onSnapshot, query, orderBy, serverTimestamp
+  onSnapshot, query, orderBy, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ====================== FIREBASE CONFIG ======================
@@ -829,6 +879,7 @@ const FEEDS = [
 let selCages = new Set();
 let feedQty  = {}; FEEDS.forEach(f => feedQty[f.id] = 0);
 let logs     = [];
+let deletedLogs = [];
 
 // ====================== LOADING ======================
 function hideLoadingOverlay(){
@@ -881,6 +932,22 @@ onSnapshot(logsQuery, (snapshot)=>{
   setDbStatus(false);
   hideLoadingOverlay();
   toast('⚠ Database connection error');
+});
+
+// ====================== TRASH (RECENTLY DELETED) LISTENER ======================
+const deletedLogsRef   = collection(db, 'deleted_feed_logs');
+const deletedLogsQuery = query(deletedLogsRef, orderBy('deletedAt','desc'));
+
+onSnapshot(deletedLogsQuery, (snapshot)=>{
+  deletedLogs = snapshot.docs.map(d=>({ trashId: d.id, ...d.data() }));
+  const badge = document.getElementById('trash-badge');
+  if(badge){
+    badge.textContent = deletedLogs.length;
+    badge.classList.toggle('zero', deletedLogs.length === 0);
+  }
+  if(!document.getElementById('trash-overlay').classList.contains('hidden')) renderTrash();
+}, (error)=>{
+  console.error('Firestore error (trash):', error);
 });
 
 // ====================== TABS ======================
@@ -1092,20 +1159,204 @@ window.renderLogs = function(){
   }).join('');
 };
 
-// DELETE — PIN protected
+// DELETE — PIN protected. Records are archived to the trash, never wiped outright.
 window.deleteLog = function(firestoreId){
   requirePin(async ()=>{
-    if(!confirm('Delete this feeding record?')) return;
+    if(!confirm('Delete this feeding record? It will be moved to Recently Deleted and can be restored later.')) return;
     showSync('Deleting record…');
     try {
+      const original = logs.find(l => l.firestoreId === firestoreId);
+      if(original){
+        const { firestoreId: _drop, ...rest } = original;
+        await addDoc(deletedLogsRef, { ...rest, originalId: firestoreId, deletedAt: serverTimestamp(), deleteType: 'single' });
+      }
       await deleteDoc(doc(db,'feed_logs',firestoreId));
       showSync('Deleted ✓');
       setTimeout(hideSync, 1500);
+      toast('✓ Moved to Recently Deleted');
     } catch(e){
       toast('⚠ Could not delete. Check connection.');
       hideSync();
     }
   });
+};
+
+// ====================== CLEAR CAGE RECORDS (bulk, one click) ======================
+window.clearCageRecords = function(){
+  const cage = document.getElementById('fl-cage').value;
+  if(!cage){ toast('⚠ Pick a cage in the filter above first, then Clear Cage Records.'); return; }
+  const matches = logs.filter(l => l.cages && l.cages.includes(cage));
+  if(!matches.length){ toast(`No records found for cage ${cage}.`); return; }
+  const totalKg = matches.reduce((s,l)=> s + l.feeds.reduce((s2,f)=> s2 + f.qty*f.kg, 0), 0);
+  if(!confirm(`Clear all ${matches.length} record(s) for cage ${cage} (${totalKg.toLocaleString()} kg total)?\n\nA backup report will be downloaded automatically, and the records will be moved to Recently Deleted so they can be restored if needed.`)) return;
+  requirePin(async ()=>{
+    showSync(`Clearing records for cage ${cage}…`);
+    try {
+      downloadClearedReport(matches, cage);
+      const batch = writeBatch(db);
+      matches.forEach(l=>{
+        const { firestoreId, ...rest } = l;
+        const trashRef = doc(deletedLogsRef);
+        batch.set(trashRef, { ...rest, originalId: firestoreId, deletedAt: serverTimestamp(), deleteType: 'cage-clear', clearedCage: cage });
+        batch.delete(doc(db,'feed_logs',firestoreId));
+      });
+      await batch.commit();
+      showSync('Cage cleared ✓');
+      setTimeout(hideSync, 1500);
+      toast(`✓ Cleared ${matches.length} record(s) for cage ${cage}`);
+    } catch(e){
+      console.error(e);
+      toast('⚠ Could not clear cage records. Check connection.');
+      hideSync();
+    }
+  });
+};
+
+function downloadClearedReport(matches, cage){
+  const rows = [];
+  rows.push(['Heritage Fish Company — Cleared Cage Report']);
+  rows.push([`Cage: ${cage}`, `Cleared on: ${new Date().toLocaleString('en-GB')}`, `Records: ${matches.length}`]);
+  rows.push([]);
+  rows.push(['Date','Time','Cage(s)','Feed','Size','Bags','Total kg','Fed By','Notes']);
+  matches.forEach(l=>{
+    const dt = new Date(l.ts);
+    const ds = dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const ts = dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    l.feeds.forEach(f=>{
+      rows.push([ds, ts, l.cages.join('; '), f.label, f.size, f.qty, f.qty*f.kg, l.fedBy||'—', l.notes||'—']);
+    });
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const fname = `HFC_ClearedCage_${cage}_${new Date().toISOString().slice(0,10)}.csv`;
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = fname;
+  a.click();
+}
+
+// ====================== RECENTLY DELETED (TRASH) MODAL ======================
+window.openTrashModal = function(){
+  document.getElementById('trash-overlay').classList.remove('hidden');
+  renderTrash();
+};
+window.closeTrashModal = function(){
+  document.getElementById('trash-overlay').classList.add('hidden');
+};
+
+function timeAgo(tsVal){
+  if(!tsVal) return '—';
+  const d = tsVal.toDate ? tsVal.toDate() : new Date(tsVal);
+  const diffMin = Math.round((Date.now() - d.getTime())/60000);
+  if(diffMin < 1) return 'just now';
+  if(diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin/60);
+  if(diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.round(diffHr/24);
+  return `${diffDay}d ago`;
+}
+
+window.renderTrash = function(){
+  const tbody = document.getElementById('trash-tbody');
+  const empty = document.getElementById('trash-empty');
+  if(!deletedLogs.length){ tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = deletedLogs.map(l=>{
+    const dt = new Date(l.ts);
+    const ds = dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const kg = (l.feeds||[]).reduce((s,f)=> s + f.qty*f.kg, 0);
+    const feedSummary = (l.feeds||[]).map(f=>`${f.label} ${f.size} ×${f.qty}`).join(', ');
+    return `
+      <tr>
+        <td style="font-family:var(--mono);font-size:12px;white-space:nowrap;">${ds}</td>
+        <td style="font-weight:700;">${(l.cages||[]).join(', ')}${l.deleteType==='cage-clear'?`<div class="cage-clear-tag">Cleared: ${l.clearedCage}</div>`:''}</td>
+        <td style="font-size:12px;">${feedSummary}</td>
+        <td style="font-family:var(--mono);font-weight:700;color:var(--gold);">${kg.toLocaleString()} kg</td>
+        <td class="trash-row-meta">${timeAgo(l.deletedAt)}</td>
+        <td style="white-space:nowrap;">
+          <button class="restore-btn" onclick="restoreLog('${l.trashId}')">↺ Restore</button>
+          <button class="forever-btn" onclick="permanentlyDeleteLog('${l.trashId}')">✕ Forever</button>
+        </td>
+      </tr>`;
+  }).join('');
+};
+
+window.restoreLog = function(trashId){
+  const entry = deletedLogs.find(l => l.trashId === trashId);
+  if(!entry) return;
+  if(!confirm('Restore this record back into the active log?')) return;
+  showSync('Restoring record…');
+  const { trashId: _drop, originalId, deletedAt, deleteType, clearedCage, ...rest } = entry;
+  (async ()=>{
+    try {
+      await addDoc(logsRef, rest);
+      await deleteDoc(doc(db,'deleted_feed_logs',trashId));
+      showSync('Restored ✓');
+      setTimeout(hideSync, 1500);
+      toast('✓ Record restored');
+    } catch(e){
+      console.error(e);
+      toast('⚠ Could not restore. Check connection.');
+      hideSync();
+    }
+  })();
+};
+
+window.permanentlyDeleteLog = function(trashId){
+  requirePin(async ()=>{
+    if(!confirm('Permanently delete this record? This cannot be undone.')) return;
+    showSync('Removing permanently…');
+    try {
+      await deleteDoc(doc(db,'deleted_feed_logs',trashId));
+      showSync('Removed ✓');
+      setTimeout(hideSync, 1500);
+    } catch(e){
+      toast('⚠ Could not remove. Check connection.');
+      hideSync();
+    }
+  });
+};
+
+window.emptyTrash = function(){
+  if(!deletedLogs.length){ toast('Trash is already empty.'); return; }
+  requirePin(async ()=>{
+    if(!confirm(`Permanently delete all ${deletedLogs.length} record(s) in Recently Deleted? This cannot be undone.`)) return;
+    showSync('Emptying trash…');
+    try {
+      const batch = writeBatch(db);
+      deletedLogs.forEach(l => batch.delete(doc(db,'deleted_feed_logs', l.trashId)));
+      await batch.commit();
+      showSync('Trash emptied ✓');
+      setTimeout(hideSync, 1500);
+    } catch(e){
+      console.error(e);
+      toast('⚠ Could not empty trash. Check connection.');
+      hideSync();
+    }
+  });
+};
+
+window.downloadTrashCSV = function(){
+  if(!deletedLogs.length){ toast('⚠ Nothing in the trash to download.'); return; }
+  const rows = [];
+  rows.push(['Heritage Fish Company — Recently Deleted Report']);
+  rows.push([`Generated: ${new Date().toLocaleString('en-GB')}`, `Records: ${deletedLogs.length}`]);
+  rows.push([]);
+  rows.push(['Date','Time','Cage(s)','Feed','Size','Bags','Total kg','Fed By','Notes','Deleted Type','Cleared Cage']);
+  deletedLogs.forEach(l=>{
+    const dt = new Date(l.ts);
+    const ds = dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const ts = dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    (l.feeds||[]).forEach(f=>{
+      rows.push([ds, ts, (l.cages||[]).join('; '), f.label, f.size, f.qty, f.qty*f.kg, l.fedBy||'—', l.notes||'—', l.deleteType||'—', l.clearedCage||'—']);
+    });
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const fname = `HFC_RecentlyDeleted_${new Date().toISOString().slice(0,10)}.csv`;
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = fname;
+  a.click();
+  toast(`✓ Downloaded ${fname}`);
 };
 
 window.exportCSV = function(){
