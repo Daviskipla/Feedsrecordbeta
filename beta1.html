@@ -123,6 +123,7 @@ header{border-bottom:1px solid var(--border);padding:0;margin-bottom:28px;positi
 .ft-brand{font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
 .ft-brand.growel{color:var(--amber);}
 .ft-brand.optiline{color:var(--green);}
+.ft-brand.aminova{color:var(--water);}
 .ft-size{font-size:22px;font-family:var(--serif);font-weight:700;color:var(--text);margin:3px 0;}
 .ft-kg{font-size:11px;font-family:var(--mono);color:var(--muted);}
 .qty-row{display:flex;align-items:center;gap:8px;margin-top:12px;}
@@ -321,6 +322,27 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 .forever-btn:hover{background:rgba(224,112,96,0.15);}
 .cage-clear-tag{display:inline-block;background:rgba(224,112,96,0.12);color:var(--coral);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-top:3px;}
 
+/* ======== HATCHERY ======== */
+.hatchery-wrap{margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);display:flex;gap:12px;flex-wrap:wrap;}
+.hatchery-tile{width:auto;min-width:170px;display:inline-block;}
+.hatchery-tile:hover,.hatchery-tile.sel{border-color:var(--amber);background:rgba(240,160,75,0.12);}
+.hatchery-tile .cage-id{color:var(--amber);font-size:16px;}
+.hatchery-tile .cage-status{font-size:10px;}
+
+/* ======== STOCK BALANCE ======== */
+.stock-bal-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;}
+.stock-bal-card.low{border-color:rgba(224,112,96,0.5);background:rgba(224,112,96,0.07);}
+.stock-bal-brand{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--gold-light);}
+.stock-bal-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px;font-family:var(--mono);}
+.stock-bal-balance{font-size:22px;font-weight:700;color:var(--green);margin-top:6px;font-family:var(--mono);}
+.stock-bal-card.low .stock-bal-balance{color:var(--coral);}
+.stock-low-tag{display:inline-block;background:rgba(224,112,96,0.15);color:var(--coral);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-top:6px;}
+.stock-add-overlay{position:fixed;inset:0;background:rgba(10,25,18,0.85);backdrop-filter:blur(8px);z-index:8500;display:flex;align-items:center;justify-content:center;padding:20px;}
+.stock-add-overlay.hidden{display:none;}
+.stock-add-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;width:460px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.stock-history-row{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid var(--border);font-size:12px;}
+.stock-history-row:last-child{border-bottom:none;}
+
 </style>
 </head>
 <body>
@@ -452,6 +474,79 @@ tbody td{padding:11px 14px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- ======== STOCK MOVEMENT MODAL (Receive / Use) ======== -->
+<div class="stock-add-overlay hidden" id="stock-add-overlay">
+  <div class="stock-add-box">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title" id="sa-title">📦 Receive Stock</div>
+        <div class="dl-sub" id="sa-sub">Log feed that's just arrived so the balance stays accurate.</div>
+      </div>
+      <button class="dl-close" onclick="closeStockAddModal()">&#x2715;</button>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Feed Type</div>
+      <select class="field-select" id="sa-feed"></select>
+    </div>
+    <div class="form-row">
+      <div class="field-row" style="margin-bottom:0;">
+        <div class="field-label" id="sa-bags-label">Bags Received</div>
+        <input type="number" min="0" class="field-inp" id="sa-bags" value="0">
+      </div>
+      <div class="field-row" style="margin-bottom:0;">
+        <div class="field-label" id="sa-date-label">Date Received</div>
+        <input type="date" class="field-inp" id="sa-date">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-label" id="sa-note-label">Supplier / Note (optional)</div>
+      <input type="text" class="field-inp" id="sa-note" placeholder="e.g. Order from Unga Feeds">
+    </div>
+    <div id="sa-err" style="color:var(--coral);font-size:13px;margin-bottom:10px;"></div>
+    <button class="btn-gold" id="sa-submit-btn" onclick="submitStockEntry()" style="width:100%;padding:13px;font-size:14px;">✓ Save Stock Received</button>
+  </div>
+</div>
+
+<!-- ======== EDIT RECORD MODAL ======== -->
+<div class="stock-add-overlay hidden" id="edit-log-overlay">
+  <div class="stock-add-box" style="width:560px;">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title">✎ Edit Feeding Record</div>
+        <div class="dl-sub">Fix a wrong feed type, quantity, cage, or date on an existing record.</div>
+      </div>
+      <button class="dl-close" onclick="closeEditLogModal()">&#x2715;</button>
+    </div>
+    <div class="form-row">
+      <div class="field-row" style="margin-bottom:0;">
+        <div class="field-label">Date</div>
+        <input type="date" class="field-inp" id="el-date">
+      </div>
+      <div class="field-row" style="margin-bottom:0;">
+        <div class="field-label">Time</div>
+        <input type="time" class="field-inp" id="el-time">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Cage(s) / Location — comma separated</div>
+      <input type="text" class="field-inp" id="el-cages" placeholder="e.g. A1, A2 or Hatchery">
+    </div>
+    <div class="field-label" style="margin-top:4px;">Feeds</div>
+    <div id="el-feed-rows"></div>
+    <button class="btn-ghost" onclick="addEditFeedRow()" style="margin:8px 0 16px;width:100%;">+ Add Feed Row</button>
+    <div class="field-row">
+      <div class="field-label">Fed By</div>
+      <input type="text" class="field-inp" id="el-fedby">
+    </div>
+    <div class="field-row">
+      <div class="field-label">Notes</div>
+      <input type="text" class="field-inp" id="el-notes">
+    </div>
+    <div id="el-err" style="color:var(--coral);font-size:13px;margin-bottom:10px;"></div>
+    <button class="btn-gold" onclick="saveEditLog()" style="width:100%;padding:13px;font-size:14px;">✓ Save Changes</button>
+  </div>
+</div>
+
 <!-- ======== HEADER ======== -->
 <header>
   <div class="header-bg"></div>
@@ -501,11 +596,18 @@ tbody td{padding:11px 14px;vertical-align:middle;}
         <button class="qbtn" onclick="clearSel()">Clear</button>
       </div>
       <div id="cage-container"></div>
+      <div class="hatchery-wrap">
+        <div class="cage-tile hatchery-tile" id="ct-Hatchery" onclick="toggleCage('Hatchery')">
+          <div class="cage-id">🐣 Hatchery</div>
+          <div class="cage-status">Optiline 4mm</div>
+        </div>
+      </div>
       <div class="sel-summary" id="sel-summary">No cages selected</div>
     </div>
 
     <div class="card">
       <div class="sec-title">Step 2 — Select Feed Type &amp; Quantity</div>
+      <div id="feed-grid-hint" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
       <div class="feed-grid" id="feed-grid"></div>
       <div id="feed-total-line" style="font-size:13px;font-family:var(--mono);color:var(--gold);padding:8px 4px;"></div>
     </div>
@@ -591,6 +693,23 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 
   <!-- ========== STOCK CHECK PAGE ========== -->
   <div id="pg-stock" class="page">
+    <div class="sec-title">Current Stock Balance</div>
+    <div class="card" style="padding:22px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+        Balance = total stock received − total fed out so far, worked out automatically from your feeding records.
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+        <button class="btn-gold" onclick="openStockAddModal('received')" style="padding:11px 24px;font-size:14px;">+ Receive Stock</button>
+        <button class="btn-danger" onclick="openStockAddModal('used')">− Record Stock Used (no cage)</button>
+        <button class="btn-ghost" id="stock-history-btn" onclick="toggleStockHistory()">📜 Stock Received History</button>
+      </div>
+      <div id="stock-balance-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;"></div>
+      <div id="stock-history-panel" style="display:none;margin-top:18px;border-top:1px solid var(--border);padding-top:16px;">
+        <div id="stock-history-list"></div>
+        <div id="stock-history-empty" class="empty" style="display:none;"><div class="ico">📜</div><p>No stock has been logged as received yet.</p></div>
+      </div>
+    </div>
+
     <div class="sec-title">Date Range Stock Analysis</div>
 
     <div class="card" style="padding:22px;">
@@ -784,7 +903,7 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, getDocs, deleteDoc, doc,
+  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc,
   onSnapshot, query, orderBy, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -874,7 +993,11 @@ const FEEDS = [
   {id:'optiline-2mm', label:'Optiline', size:'2mm', kg:25, type:'optiline'},
   {id:'optiline-3mm', label:'Optiline', size:'3mm', kg:25, type:'optiline'},
   {id:'optiline-4mm', label:'Optiline', size:'4mm', kg:25, type:'optiline'},
+  {id:'optiline-aminova-2mm', label:'Optiline Aminova', size:'2mm', kg:25, type:'aminova'},
+  {id:'optiline-aminova-3mm', label:'Optiline Aminova', size:'3mm', kg:25, type:'aminova'},
+  {id:'optiline-aminova-4mm', label:'Optiline Aminova', size:'4mm', kg:25, type:'aminova'},
 ];
+const HATCHERY_ID = 'Hatchery';
 
 let selCages = new Set();
 let feedQty  = {}; FEEDS.forEach(f => feedQty[f.id] = 0);
@@ -919,6 +1042,8 @@ onSnapshot(logsQuery, (snapshot)=>{
   setDbStatus(true);
   hideLoadingOverlay();
   buildCages();
+  updateHatcheryStatus();
+  renderStockBalance();
   const activeTab = document.querySelector('.nav-tab.active');
   if(activeTab){
     const idx  = [...document.querySelectorAll('.nav-tab')].indexOf(activeTab);
@@ -948,7 +1073,147 @@ onSnapshot(deletedLogsQuery, (snapshot)=>{
   if(!document.getElementById('trash-overlay').classList.contains('hidden')) renderTrash();
 }, (error)=>{
   console.error('Firestore error (trash):', error);
+  if(error.code === 'permission-denied'){
+    toast('⚠ Database rules are blocking Recently Deleted — ask whoever manages Firebase to allow the "deleted_feed_logs" collection.');
+  }
 });
+
+// ====================== STOCK BALANCE LISTENER ======================
+const stockEntriesRef   = collection(db, 'stock_entries');
+const stockEntriesQuery = query(stockEntriesRef, orderBy('date','desc'));
+let stockEntries = [];
+const LOW_STOCK_BAGS = 5;
+
+onSnapshot(stockEntriesQuery, (snapshot)=>{
+  stockEntries = snapshot.docs.map(d=>({ entryId: d.id, ...d.data() }));
+  renderStockBalance();
+  if(document.getElementById('stock-history-panel').style.display !== 'none') renderStockHistory();
+}, (error)=>{
+  console.error('Firestore error (stock):', error);
+  if(error.code === 'permission-denied'){
+    toast('⚠ Database rules are blocking Stock data — ask whoever manages Firebase to allow the "stock_entries" collection.');
+  } else {
+    toast('⚠ Could not load stock data: ' + error.message);
+  }
+});
+
+function renderStockBalance(){
+  const grid = document.getElementById('stock-balance-grid');
+  if(!grid) return;
+  grid.innerHTML = FEEDS.map(f=>{
+    const receivedBags = stockEntries.filter(s=>s.feedId===f.id && s.kind!=='used').reduce((s,e)=> s + (e.bags||0), 0);
+    const manualUsedBags = stockEntries.filter(s=>s.feedId===f.id && s.kind==='used').reduce((s,e)=> s + (e.bags||0), 0);
+    const usedBags = logs.reduce((s,l)=> s + (l.feeds||[]).filter(x=>x.id===f.id).reduce((s2,x)=> s2 + x.qty, 0), 0) + manualUsedBags;
+    const balance = receivedBags - usedBags;
+    const low = balance <= LOW_STOCK_BAGS;
+    return `
+      <div class="stock-bal-card${low?' low':''}">
+        <div class="stock-bal-brand">${f.label} <span style="color:var(--muted);font-size:12px;">${f.size}</span></div>
+        <div class="stock-bal-row"><span>Received</span><span>${receivedBags} bags</span></div>
+        <div class="stock-bal-row"><span>Used (cages)</span><span>${usedBags-manualUsedBags} bags</span></div>
+        ${manualUsedBags ? `<div class="stock-bal-row"><span>Used (no cage)</span><span>${manualUsedBags} bags</span></div>` : ''}
+        <div class="stock-bal-balance">${balance.toLocaleString()} bags <span style="font-size:12px;color:var(--muted);">(${(balance*f.kg).toLocaleString()} kg)</span></div>
+        ${low ? '<div class="stock-low-tag">⚠ Low Stock</div>' : ''}
+      </div>`;
+  }).join('');
+}
+
+window.toggleStockHistory = function(){
+  try {
+    const panel = document.getElementById('stock-history-panel');
+    const btn   = document.getElementById('stock-history-btn');
+    const show = panel.style.display === 'none';
+    panel.style.display = show ? 'block' : 'none';
+    if(btn) btn.textContent = show ? '▲ Hide Stock History' : '📜 Stock Received History';
+    if(show){
+      renderStockHistory();
+      panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+  } catch(e){
+    console.error('toggleStockHistory error:', e);
+    toast('⚠ Could not open Stock History — please refresh and try again.');
+  }
+};
+
+function renderStockHistory(){
+  const list  = document.getElementById('stock-history-list');
+  const empty = document.getElementById('stock-history-empty');
+  if(!stockEntries.length){ list.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display = 'none';
+  list.innerHTML = stockEntries.map(e=>{
+    const f = FEEDS.find(x=>x.id===e.feedId);
+    const ds = e.date ? new Date(e.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';
+    const isUsed = e.kind === 'used';
+    return `
+      <div class="stock-history-row">
+        <span><strong style="color:${isUsed?'var(--coral)':'var(--green)'}">${isUsed?'−':'+'}</strong> <strong>${f?f.label+' '+f.size:e.feedId}</strong> — ${e.bags} bags${isUsed?' used (no cage)':' received'} · ${ds}${e.note?' · '+e.note:''}</span>
+        <button class="forever-btn" onclick="deleteStockEntry('${e.entryId}')">✕ Remove</button>
+      </div>`;
+  }).join('');
+}
+
+window.openStockAddModal = function(kind){
+  kind = kind || 'received';
+  const sel = document.getElementById('sa-feed');
+  sel.innerHTML = FEEDS.map(f=>`<option value="${f.id}">${f.label} ${f.size} (${f.kg}kg/bag)</option>`).join('');
+  document.getElementById('sa-bags').value = 0;
+  document.getElementById('sa-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('sa-note').value = '';
+  document.getElementById('sa-err').textContent = '';
+  document.getElementById('stock-add-overlay').dataset.kind = kind;
+  if(kind === 'used'){
+    document.getElementById('sa-title').textContent = '➖ Record Stock Used';
+    document.getElementById('sa-sub').textContent = "For feed that's used or given out but never logged against a cage (e.g. samples, spillage, transfers) — so the balance still matches what's really left.";
+    document.getElementById('sa-bags-label').textContent = 'Bags Used';
+    document.getElementById('sa-date-label').textContent = 'Date Used';
+    document.getElementById('sa-note-label').textContent = 'Reason / Note (optional)';
+    document.getElementById('sa-submit-btn').textContent = '✓ Save Stock Used';
+  } else {
+    document.getElementById('sa-title').textContent = '📦 Receive Stock';
+    document.getElementById('sa-sub').textContent = "Log feed that's just arrived so the balance stays accurate.";
+    document.getElementById('sa-bags-label').textContent = 'Bags Received';
+    document.getElementById('sa-date-label').textContent = 'Date Received';
+    document.getElementById('sa-note-label').textContent = 'Supplier / Note (optional)';
+    document.getElementById('sa-submit-btn').textContent = '✓ Save Stock Received';
+  }
+  document.getElementById('stock-add-overlay').classList.remove('hidden');
+};
+window.closeStockAddModal = function(){
+  document.getElementById('stock-add-overlay').classList.add('hidden');
+};
+
+window.submitStockEntry = async function(){
+  const kind   = document.getElementById('stock-add-overlay').dataset.kind || 'received';
+  const feedId = document.getElementById('sa-feed').value;
+  const bags   = parseInt(document.getElementById('sa-bags').value) || 0;
+  const date   = document.getElementById('sa-date').value;
+  const note   = document.getElementById('sa-note').value.trim();
+  const err    = document.getElementById('sa-err');
+  if(bags <= 0){ err.textContent = kind==='used' ? '⚠ Enter how many bags were used.' : '⚠ Enter how many bags were received.'; return; }
+  if(!date){ err.textContent = '⚠ Please pick a date.'; return; }
+  try {
+    await addDoc(stockEntriesRef, { feedId, bags, date, note, kind, createdAt: serverTimestamp() });
+    closeStockAddModal();
+    toast(kind==='used' ? '✓ Stock usage logged' : '✓ Stock received logged');
+  } catch(e){
+    console.error(e);
+    err.textContent = e.code === 'permission-denied'
+      ? '⚠ Database rules are blocking this — ask whoever manages Firebase to allow the "stock_entries" collection.'
+      : '⚠ Could not save: ' + (e.message || 'check connection.');
+  }
+};
+
+window.deleteStockEntry = function(entryId){
+  requirePin(async ()=>{
+    if(!confirm('Remove this stock entry? This cannot be undone.')) return;
+    try {
+      await deleteDoc(doc(db,'stock_entries',entryId));
+      toast('✓ Stock entry removed');
+    } catch(e){
+      toast('⚠ Could not remove. Check connection.');
+    }
+  });
+};
 
 // ====================== TABS ======================
 window.goTab = function(t){
@@ -998,14 +1263,22 @@ function wasFedToday(cid){
   return logs.some(l => l.cages && l.cages.includes(cid) && new Date(l.ts).toDateString()===today);
 }
 
-function toggleCage(cid){ selCages.has(cid)?selCages.delete(cid):selCages.add(cid); updateCageUI(); }
+function updateHatcheryStatus(){
+  const el = document.getElementById('ct-Hatchery');
+  if(!el) return;
+  const fed = wasFedToday(HATCHERY_ID);
+  el.querySelector('.cage-status').textContent = fed ? '✓ Fed today — Optiline 4mm' : 'Optiline 4mm';
+}
+
+window.toggleCage = function(cid){ selCages.has(cid)?selCages.delete(cid):selCages.add(cid); updateCageUI(); };
 function updateCageUI(){
   document.querySelectorAll('.cage-tile').forEach(el=>{
     el.classList.toggle('sel', selCages.has(el.id.replace('ct-','')));
   });
   const n  = selCages.size;
   const el = document.getElementById('sel-summary');
-  el.innerHTML = n===0?'No cages selected':`<strong>${n} cage${n>1?'s':''} selected: ${[...selCages].sort().join(', ')}</strong>`;
+  el.innerHTML = n===0?'No cages selected':`<strong>${n} location${n>1?'s':''} selected: ${[...selCages].sort().join(', ')}</strong>`;
+  buildFeedGrid();
 }
 window.selSec  = s => { CAGES[s].forEach(c=>selCages.add(c)); updateCageUI(); };
 window.selAll  = ()=> { Object.values(CAGES).flat().forEach(c=>selCages.add(c)); updateCageUI(); };
@@ -1015,7 +1288,12 @@ window.clearSel= ()=> { selCages.clear(); updateCageUI(); };
 function buildFeedGrid(){
   const g = document.getElementById('feed-grid');
   g.innerHTML = '';
-  FEEDS.forEach(f=>{
+  document.getElementById('feed-grid-hint').textContent = '';
+  const visible = FEEDS;
+  const hidden  = [];
+  // Clear quantities for feeds that are hidden by the current selection so they can't be silently submitted
+  hidden.forEach(f=>{ if(feedQty[f.id] > 0) feedQty[f.id] = 0; });
+  visible.forEach(f=>{
     const el = document.createElement('div');
     el.className = 'feed-tile';
     el.id = 'ft-'+f.id;
@@ -1113,7 +1391,7 @@ function toast(msg){ const el=document.getElementById('toast'); el.textContent=m
 
 // ====================== LOGS ======================
 function populateFilters(){
-  const allC = Object.values(CAGES).flat();
+  const allC = [...Object.values(CAGES).flat(), HATCHERY_ID];
   document.getElementById('fl-cage').innerHTML='<option value="">All Cages</option>'+allC.map(c=>`<option value="${c}">${c}</option>`).join('');
   document.getElementById('fl-feed').innerHTML='<option value="">All Feeds</option>'+FEEDS.map(f=>`<option value="${f.id}">${f.label} ${f.size}</option>`).join('');
 }
@@ -1154,7 +1432,7 @@ window.renderLogs = function(){
         <td style="font-family:var(--mono);font-weight:700;">${f.qty*f.kg} kg</td>
         ${i===0?`<td rowspan="${l.feeds.length}" style="font-size:12px;color:var(--muted);">${l.fedBy||'—'}</td>`:''}
         ${i===0?`<td rowspan="${l.feeds.length}" style="font-size:12px;color:var(--muted);max-width:180px;">${l.notes||'—'}</td>`:''}
-        ${i===0?`<td rowspan="${l.feeds.length}"><button class="del-btn" onclick="deleteLog('${l.firestoreId}')">✕</button></td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="white-space:nowrap;"><button class="del-btn" style="border-color:rgba(76,175,125,0.35);color:var(--green);margin-right:5px;" onclick="openEditLog('${l.firestoreId}')">✎ Edit</button><button class="del-btn" onclick="deleteLog('${l.firestoreId}')">✕</button></td>`:''}
       </tr>`).join('');
   }).join('');
 };
@@ -1181,7 +1459,82 @@ window.deleteLog = function(firestoreId){
   });
 };
 
-// ====================== CLEAR CAGE RECORDS (bulk, one click) ======================
+// ====================== EDIT RECORD ======================
+let editFeedRows = []; // [{id, qty}]
+let editingLogId = null;
+
+window.openEditLog = function(firestoreId){
+  const l = logs.find(x => x.firestoreId === firestoreId);
+  if(!l){ toast('⚠ Could not find that record.'); return; }
+  editingLogId = firestoreId;
+  const dt = new Date(l.ts);
+  document.getElementById('el-date').value = dt.toISOString().slice(0,10);
+  document.getElementById('el-time').value = dt.toTimeString().slice(0,5);
+  document.getElementById('el-cages').value = (l.cages||[]).join(', ');
+  document.getElementById('el-fedby').value = l.fedBy || '';
+  document.getElementById('el-notes').value = l.notes || '';
+  document.getElementById('el-err').textContent = '';
+  editFeedRows = (l.feeds||[]).map(f=>({ id:f.id, qty:f.qty }));
+  renderEditFeedRows();
+  document.getElementById('edit-log-overlay').classList.remove('hidden');
+};
+
+window.closeEditLogModal = function(){
+  document.getElementById('edit-log-overlay').classList.add('hidden');
+  editingLogId = null;
+};
+
+function renderEditFeedRows(){
+  const wrap = document.getElementById('el-feed-rows');
+  wrap.innerHTML = editFeedRows.map((row,idx)=>`
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+      <select class="field-select" style="flex:2;" onchange="setEditFeedId(${idx},this.value)">
+        ${FEEDS.map(f=>`<option value="${f.id}" ${f.id===row.id?'selected':''}>${f.label} ${f.size}</option>`).join('')}
+      </select>
+      <input type="number" min="0" class="field-inp" style="flex:1;" value="${row.qty}" onchange="setEditFeedQty(${idx},this.value)">
+      <button class="forever-btn" onclick="removeEditFeedRow(${idx})">✕</button>
+    </div>`).join('');
+}
+window.setEditFeedId  = (idx,val)=>{ editFeedRows[idx].id = val; };
+window.setEditFeedQty = (idx,val)=>{ editFeedRows[idx].qty = Math.max(0, parseInt(val)||0); };
+window.removeEditFeedRow = (idx)=>{ editFeedRows.splice(idx,1); renderEditFeedRows(); };
+window.addEditFeedRow = ()=>{ editFeedRows.push({ id: FEEDS[0].id, qty: 1 }); renderEditFeedRows(); };
+
+window.saveEditLog = function(){
+  const err = document.getElementById('el-err');
+  const cagesRaw = document.getElementById('el-cages').value.trim();
+  const cages = cagesRaw.split(',').map(c=>c.trim()).filter(Boolean);
+  if(!cages.length){ err.textContent = '⚠ Enter at least one cage or location.'; return; }
+  const validFeeds = editFeedRows.filter(r => r.qty > 0);
+  if(!validFeeds.length){ err.textContent = '⚠ Add at least one feed with a quantity above 0.'; return; }
+  const dateVal = document.getElementById('el-date').value;
+  const timeVal = document.getElementById('el-time').value || '00:00';
+  if(!dateVal){ err.textContent = '⚠ Please pick a date.'; return; }
+  requirePin(async ()=>{
+    try {
+      const feeds = validFeeds.map(r=>{
+        const f = FEEDS.find(x=>x.id===r.id);
+        return { id:f.id, label:f.label, size:f.size, kg:f.kg, type:f.type, qty:r.qty };
+      });
+      await updateDoc(doc(db,'feed_logs',editingLogId), {
+        ts: new Date(`${dateVal}T${timeVal}`).toISOString(),
+        cages,
+        feeds,
+        fedBy: document.getElementById('el-fedby').value.trim(),
+        notes: document.getElementById('el-notes').value.trim(),
+      });
+      closeEditLogModal();
+      toast('✓ Record updated');
+    } catch(e){
+      console.error(e);
+      err.textContent = e.code === 'permission-denied'
+        ? '⚠ Database rules are blocking edits — ask whoever manages Firebase to allow updates on "feed_logs".'
+        : '⚠ Could not save: ' + (e.message || 'check connection.');
+    }
+  });
+};
+
+
 window.clearCageRecords = function(){
   const cage = document.getElementById('fl-cage').value;
   if(!cage){ toast('⚠ Pick a cage in the filter above first, then Clear Cage Records.'); return; }
@@ -2588,7 +2941,7 @@ window.downloadMonthlyReport = function(){
 function populateStockCageFilter(){
   const sel = document.getElementById('stock-cage');
   if(!sel) return;
-  const allC = Object.values(CAGES).flat();
+  const allC = [...Object.values(CAGES).flat(), HATCHERY_ID];
   sel.innerHTML = '<option value="">All Cages</option>' + allC.map(c=>`<option value="${c}">${c}</option>`).join('');
 }
 
