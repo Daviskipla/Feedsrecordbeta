@@ -655,6 +655,7 @@ tbody td{padding:11px 14px;vertical-align:middle;}
       <button class="btn-danger" onclick="clearCageRecords()">🗑 Clear Cage Records</button>
       <button class="btn-ghost btn-trash" onclick="openTrashModal()">🗂 Recently Deleted<span class="trash-badge zero" id="trash-badge">0</span></button>
     </div>
+    <div id="log-filtered-total" style="font-family:var(--mono);font-size:13px;color:var(--gold);font-weight:700;margin:4px 2px 10px;"></div>
     <div class="tbl-wrap">
       <table>
         <thead>
@@ -1294,8 +1295,9 @@ function buildFeedGrid(){
   // Clear quantities for feeds that are hidden by the current selection so they can't be silently submitted
   hidden.forEach(f=>{ if(feedQty[f.id] > 0) feedQty[f.id] = 0; });
   visible.forEach(f=>{
+    const q = feedQty[f.id] || 0;
     const el = document.createElement('div');
-    el.className = 'feed-tile';
+    el.className = 'feed-tile' + (q>0 ? ' sel' : '');
     el.id = 'ft-'+f.id;
     el.innerHTML = `
       <div class="ft-brand ${f.type}">${f.label}</div>
@@ -1303,14 +1305,15 @@ function buildFeedGrid(){
       <div class="ft-kg">${f.kg} kg / bag</div>
       <div class="qty-row">
         <button class="qty-btn" onclick="chQty('${f.id}',-1)">−</button>
-        <input class="qty-inp" id="q-${f.id}" type="number" min="0" value="0" onchange="setQty('${f.id}',this.value)">
+        <input class="qty-inp" id="q-${f.id}" type="number" min="0" value="${q}" onchange="setQty('${f.id}',this.value)">
         <button class="qty-btn" onclick="chQty('${f.id}',1)">+</button>
         <span class="qty-lbl">bags</span>
       </div>
-      <div class="total-preview" id="tp-${f.id}"></div>
+      <div class="total-preview" id="tp-${f.id}">${q>0?`= ${q*f.kg} kg total`:''}</div>
     `;
     g.appendChild(el);
   });
+  updateFeedTotal();
 }
 window.chQty = (id,d)=>{ feedQty[id]=Math.max(0,(feedQty[id]||0)+d); refreshFeedTile(id); };
 window.setQty = (id,v)=>{ feedQty[id]=Math.max(0,parseInt(v)||0); refreshFeedTile(id); };
@@ -1415,26 +1418,45 @@ window.renderLogs = function(){
   });
   const tbody=document.getElementById('log-tbody');
   const empty=document.getElementById('log-empty');
-  if(!data.length){ tbody.innerHTML=''; empty.style.display=''; return; }
+  const totalEl=document.getElementById('log-filtered-total');
+  if(!data.length){ tbody.innerHTML=''; empty.style.display=''; if(totalEl) totalEl.textContent=''; return; }
   empty.style.display='none';
+
+  let sumBags=0, sumKg=0;
   tbody.innerHTML=data.map(l=>{
     const dt=new Date(l.ts);
     const ds=dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     const ts=dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    return l.feeds.map((f,i)=>`
+    // Only show the feed line(s) matching the active feed filter — a session can carry
+    // multiple feed types (e.g. 2mm + 4mm), and previously ALL of them rendered even when
+    // a specific size/brand was selected above, which threw off manual bag counts.
+    const rowFeeds = ff ? l.feeds.filter(f=>f.id===ff) : l.feeds;
+    if(!rowFeeds.length) return '';
+    rowFeeds.forEach(f=>{ sumBags += f.qty; sumKg += f.qty*f.kg; });
+    return rowFeeds.map((f,i)=>`
       <tr>
-        ${i===0?`<td rowspan="${l.feeds.length}" style="white-space:nowrap;font-family:var(--mono);font-size:12px;">${ds}</td>`:''}
-        ${i===0?`<td rowspan="${l.feeds.length}" style="font-family:var(--mono);font-size:12px;color:var(--muted);">${ts}</td>`:''}
-        ${i===0?`<td rowspan="${l.feeds.length}" style="font-weight:700;">${l.cages.join(', ')}</td>`:''}
+        ${i===0?`<td rowspan="${rowFeeds.length}" style="white-space:nowrap;font-family:var(--mono);font-size:12px;">${ds}</td>`:''}
+        ${i===0?`<td rowspan="${rowFeeds.length}" style="font-family:var(--mono);font-size:12px;color:var(--muted);">${ts}</td>`:''}
+        ${i===0?`<td rowspan="${rowFeeds.length}" style="font-weight:700;">${l.cages.join(', ')}</td>`:''}
         <td><span class="tag-${f.type}">${f.label}</span></td>
         <td style="font-family:var(--mono);color:var(--gold);">${f.size}</td>
         <td style="font-family:var(--mono);">${f.qty}</td>
         <td style="font-family:var(--mono);font-weight:700;">${f.qty*f.kg} kg</td>
-        ${i===0?`<td rowspan="${l.feeds.length}" style="font-size:12px;color:var(--muted);">${l.fedBy||'—'}</td>`:''}
-        ${i===0?`<td rowspan="${l.feeds.length}" style="font-size:12px;color:var(--muted);max-width:180px;">${l.notes||'—'}</td>`:''}
-        ${i===0?`<td rowspan="${l.feeds.length}" style="white-space:nowrap;"><button class="del-btn" style="border-color:rgba(76,175,125,0.35);color:var(--green);margin-right:5px;" onclick="openEditLog('${l.firestoreId}')">✎ Edit</button><button class="del-btn" onclick="deleteLog('${l.firestoreId}')">✕</button></td>`:''}
+        ${i===0?`<td rowspan="${rowFeeds.length}" style="font-size:12px;color:var(--muted);">${l.fedBy||'—'}</td>`:''}
+        ${i===0?`<td rowspan="${rowFeeds.length}" style="font-size:12px;color:var(--muted);max-width:180px;">${l.notes||'—'}</td>`:''}
+        ${i===0?`<td rowspan="${rowFeeds.length}" style="white-space:nowrap;"><button class="del-btn" style="border-color:rgba(76,175,125,0.35);color:var(--green);margin-right:5px;" onclick="openEditLog('${l.firestoreId}')">✎ Edit</button><button class="del-btn" onclick="deleteLog('${l.firestoreId}')">✕</button></td>`:''}
       </tr>`).join('');
   }).join('');
+
+  if(totalEl){
+    const cageNote = fc ? ` for ${fc}` : '';
+    // Heads up if any visible row's session was shared across more than one cage —
+    // the bags/kg shown are the FULL session amount, not split per cage, so a cage
+    // filter can still overcount if feed was logged jointly for several cages at once.
+    const sharedSessions = data.some(l => (l.cages||[]).length>1 && (!ff || l.feeds.some(f=>f.id===ff)));
+    totalEl.innerHTML = `Showing: <strong>${sumBags}</strong> bags · <strong>${sumKg.toLocaleString()}</strong> kg${cageNote}`
+      + (sharedSessions ? ` <span style="color:var(--muted);font-weight:400;">(⚠ some of these sessions were logged jointly across multiple cages — totals aren't split per cage)</span>` : '');
+  }
 };
 
 // DELETE — PIN protected. Records are archived to the trash, never wiped outright.
