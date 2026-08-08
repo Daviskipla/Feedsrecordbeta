@@ -584,6 +584,26 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 
   <!-- ========== FEED LOG PAGE ========== -->
   <div id="pg-feed" class="page active">
+    <div class="card" id="repeat-card">
+      <div class="sec-title">⚡ Quick Fill — Repeat a Previous Feeding</div>
+      <div class="form-row" style="align-items:flex-end;">
+        <div class="field-row" style="flex:1;">
+          <div class="field-label">Choose a single previous entry</div>
+          <select class="field-select" id="repeat-select">
+            <option value="">-- select a previous feeding record --</option>
+          </select>
+        </div>
+        <button class="btn-gold" style="white-space:nowrap;" onclick="applyRepeat()">🔁 Autofill &amp; Submit</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:8px;">
+        <input type="checkbox" id="repeat-autosubmit" checked style="width:auto;">
+        Auto-submit after filling (uncheck to just review this one entry first)
+      </label>
+      <div style="border-top:1px solid var(--border);margin:14px 0 10px;"></div>
+      <button class="btn-gold" id="repeat-yesterday-btn" style="width:100%;padding:12px;" onclick="applyRepeatYesterday()">🔁 Same as Yesterday (All Cages) — Fill &amp; Submit Everything</button>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;">Replays <strong>every</strong> feeding session logged yesterday — all sections/cages, one after another — as new entries dated today. One PIN entry covers the whole batch.</div>
+    </div>
+
     <div class="card">
       <div class="sec-title">Step 1 — Select Cage(s)</div>
       <div class="quick-row">
@@ -655,7 +675,6 @@ tbody td{padding:11px 14px;vertical-align:middle;}
       <button class="btn-danger" onclick="clearCageRecords()">🗑 Clear Cage Records</button>
       <button class="btn-ghost btn-trash" onclick="openTrashModal()">🗂 Recently Deleted<span class="trash-badge zero" id="trash-badge">0</span></button>
     </div>
-    <div id="log-filtered-total" style="font-family:var(--mono);font-size:13px;color:var(--gold);font-weight:700;margin:4px 2px 10px;"></div>
     <div class="tbl-wrap">
       <table>
         <thead>
@@ -1045,6 +1064,7 @@ onSnapshot(logsQuery, (snapshot)=>{
   buildCages();
   updateHatcheryStatus();
   renderStockBalance();
+  populateRepeatSelect();
   const activeTab = document.querySelector('.nav-tab.active');
   if(activeTab){
     const idx  = [...document.querySelectorAll('.nav-tab')].indexOf(activeTab);
@@ -1295,9 +1315,8 @@ function buildFeedGrid(){
   // Clear quantities for feeds that are hidden by the current selection so they can't be silently submitted
   hidden.forEach(f=>{ if(feedQty[f.id] > 0) feedQty[f.id] = 0; });
   visible.forEach(f=>{
-    const q = feedQty[f.id] || 0;
     const el = document.createElement('div');
-    el.className = 'feed-tile' + (q>0 ? ' sel' : '');
+    el.className = 'feed-tile';
     el.id = 'ft-'+f.id;
     el.innerHTML = `
       <div class="ft-brand ${f.type}">${f.label}</div>
@@ -1305,15 +1324,14 @@ function buildFeedGrid(){
       <div class="ft-kg">${f.kg} kg / bag</div>
       <div class="qty-row">
         <button class="qty-btn" onclick="chQty('${f.id}',-1)">−</button>
-        <input class="qty-inp" id="q-${f.id}" type="number" min="0" value="${q}" onchange="setQty('${f.id}',this.value)">
+        <input class="qty-inp" id="q-${f.id}" type="number" min="0" value="0" onchange="setQty('${f.id}',this.value)">
         <button class="qty-btn" onclick="chQty('${f.id}',1)">+</button>
         <span class="qty-lbl">bags</span>
       </div>
-      <div class="total-preview" id="tp-${f.id}">${q>0?`= ${q*f.kg} kg total`:''}</div>
+      <div class="total-preview" id="tp-${f.id}"></div>
     `;
     g.appendChild(el);
   });
-  updateFeedTotal();
 }
 window.chQty = (id,d)=>{ feedQty[id]=Math.max(0,(feedQty[id]||0)+d); refreshFeedTile(id); };
 window.setQty = (id,v)=>{ feedQty[id]=Math.max(0,parseInt(v)||0); refreshFeedTile(id); };
@@ -1328,6 +1346,76 @@ function refreshFeedTile(id){
 function updateFeedTotal(){
   let t = 0; FEEDS.forEach(f=>{ t += feedQty[f.id]*f.kg; });
   document.getElementById('feed-total-line').textContent = t>0?`Grand total this session: ${t} kg (${(t/1000).toFixed(3)} t)`:'';
+}
+
+// ====================== QUICK FILL / REPEAT PREVIOUS ENTRY ======================
+function populateRepeatSelect(){
+  const sel = document.getElementById('repeat-select');
+  if(!sel) return;
+  const prevVal = sel.value;
+  const opts = logs.slice(0, 40).map(l=>{
+    const d = new Date(l.ts);
+    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const cageStr = (l.cages||[]).join(', ');
+    const feedStr = (l.feeds||[]).map(f=>`${f.label} ${f.size} x${f.qty}`).join(', ');
+    const label = `${dateStr} — ${cageStr} — ${feedStr}`;
+    return `<option value="${l.firestoreId}">${label}</option>`;
+  }).join('');
+  sel.innerHTML = '<option value="">-- select a previous feeding record --</option>' + opts;
+  if(prevVal && logs.some(l=>l.firestoreId===prevVal)) sel.value = prevVal;
+}
+
+function fillFormFromLog(log){
+  if(!log){ toast('⚠ No matching record found.'); return; }
+  selCages = new Set(log.cages||[]);
+  updateCageUI(); // rebuilds feed grid + cage tile highlighting
+  FEEDS.forEach(f=>{ feedQty[f.id] = 0; });
+  (log.feeds||[]).forEach(f=>{ feedQty[f.id] = f.qty; });
+  FEEDS.forEach(f=> refreshFeedTile(f.id));
+  if(log.fedBy) document.getElementById('feed-by').value = log.fedBy;
+  document.getElementById('form-err').textContent = '';
+  toast(`✓ Autofilled from ${new Date(log.ts).toLocaleDateString('en-GB')} — review & submit`);
+}
+
+window.applyRepeat = function(){
+  const id = document.getElementById('repeat-select').value;
+  if(!id){ toast('⚠ Choose a previous entry first.'); return; }
+  const log = logs.find(l=>l.firestoreId===id);
+  fillFormFromLog(log);
+  if(document.getElementById('repeat-autosubmit').checked){
+    setTimeout(()=> submitFeed(), 150);
+  }
+};
+
+window.applyRepeatYesterday = function(){
+  const y = new Date(); y.setDate(y.getDate()-1);
+  const yStr = y.toDateString();
+  const candidates = logs.filter(l=> new Date(l.ts).toDateString()===yStr);
+  if(!candidates.length){ toast('⚠ No feeding record found for yesterday.'); return; }
+  // One PIN entry unlocks the whole batch — doSaveFeed() below is called directly per entry, not via submitFeed(), so it isn't asked again per cage/section.
+  requirePin(()=> runRepeatYesterdayBatch(candidates));
+};
+
+async function runRepeatYesterdayBatch(candidates){
+  const dateVal = new Date().toISOString().slice(0,10);
+  const btn = document.getElementById('repeat-yesterday-btn');
+  if(btn){ btn.disabled = true; }
+  let done = 0;
+  for(const log of candidates){
+    if(btn) btn.textContent = `Submitting ${done+1}/${candidates.length}…`;
+    selCages = new Set(log.cages||[]);
+    FEEDS.forEach(f=>{ feedQty[f.id] = 0; });
+    (log.feeds||[]).forEach(f=>{ feedQty[f.id] = f.qty; });
+    document.getElementById('feed-by').value = log.fedBy || '';
+    document.getElementById('feed-notes').value = `Auto-repeated from ${new Date(log.ts).toLocaleDateString('en-GB')} feeding`;
+    const feeds = FEEDS.filter(f=>feedQty[f.id]>0);
+    if(!feeds.length || !selCages.size) continue; // skip malformed/empty records
+    await doSaveFeed(feeds, dateVal);
+    done++;
+  }
+  if(btn){ btn.disabled = false; btn.textContent = '🔁 Same as Yesterday (All Cages)'; }
+  toast(`✓ Repeated ${done} feeding session${done!==1?'s':''} from yesterday, logged for today`);
+  populateRepeatSelect();
 }
 
 // ====================== SUBMIT (PIN protected) ======================
@@ -1418,45 +1506,26 @@ window.renderLogs = function(){
   });
   const tbody=document.getElementById('log-tbody');
   const empty=document.getElementById('log-empty');
-  const totalEl=document.getElementById('log-filtered-total');
-  if(!data.length){ tbody.innerHTML=''; empty.style.display=''; if(totalEl) totalEl.textContent=''; return; }
+  if(!data.length){ tbody.innerHTML=''; empty.style.display=''; return; }
   empty.style.display='none';
-
-  let sumBags=0, sumKg=0;
   tbody.innerHTML=data.map(l=>{
     const dt=new Date(l.ts);
     const ds=dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     const ts=dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    // Only show the feed line(s) matching the active feed filter — a session can carry
-    // multiple feed types (e.g. 2mm + 4mm), and previously ALL of them rendered even when
-    // a specific size/brand was selected above, which threw off manual bag counts.
-    const rowFeeds = ff ? l.feeds.filter(f=>f.id===ff) : l.feeds;
-    if(!rowFeeds.length) return '';
-    rowFeeds.forEach(f=>{ sumBags += f.qty; sumKg += f.qty*f.kg; });
-    return rowFeeds.map((f,i)=>`
+    return l.feeds.map((f,i)=>`
       <tr>
-        ${i===0?`<td rowspan="${rowFeeds.length}" style="white-space:nowrap;font-family:var(--mono);font-size:12px;">${ds}</td>`:''}
-        ${i===0?`<td rowspan="${rowFeeds.length}" style="font-family:var(--mono);font-size:12px;color:var(--muted);">${ts}</td>`:''}
-        ${i===0?`<td rowspan="${rowFeeds.length}" style="font-weight:700;">${l.cages.join(', ')}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="white-space:nowrap;font-family:var(--mono);font-size:12px;">${ds}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="font-family:var(--mono);font-size:12px;color:var(--muted);">${ts}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="font-weight:700;">${l.cages.join(', ')}</td>`:''}
         <td><span class="tag-${f.type}">${f.label}</span></td>
         <td style="font-family:var(--mono);color:var(--gold);">${f.size}</td>
         <td style="font-family:var(--mono);">${f.qty}</td>
         <td style="font-family:var(--mono);font-weight:700;">${f.qty*f.kg} kg</td>
-        ${i===0?`<td rowspan="${rowFeeds.length}" style="font-size:12px;color:var(--muted);">${l.fedBy||'—'}</td>`:''}
-        ${i===0?`<td rowspan="${rowFeeds.length}" style="font-size:12px;color:var(--muted);max-width:180px;">${l.notes||'—'}</td>`:''}
-        ${i===0?`<td rowspan="${rowFeeds.length}" style="white-space:nowrap;"><button class="del-btn" style="border-color:rgba(76,175,125,0.35);color:var(--green);margin-right:5px;" onclick="openEditLog('${l.firestoreId}')">✎ Edit</button><button class="del-btn" onclick="deleteLog('${l.firestoreId}')">✕</button></td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="font-size:12px;color:var(--muted);">${l.fedBy||'—'}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="font-size:12px;color:var(--muted);max-width:180px;">${l.notes||'—'}</td>`:''}
+        ${i===0?`<td rowspan="${l.feeds.length}" style="white-space:nowrap;"><button class="del-btn" style="border-color:rgba(76,175,125,0.35);color:var(--green);margin-right:5px;" onclick="openEditLog('${l.firestoreId}')">✎ Edit</button><button class="del-btn" onclick="deleteLog('${l.firestoreId}')">✕</button></td>`:''}
       </tr>`).join('');
   }).join('');
-
-  if(totalEl){
-    const cageNote = fc ? ` for ${fc}` : '';
-    // Heads up if any visible row's session was shared across more than one cage —
-    // the bags/kg shown are the FULL session amount, not split per cage, so a cage
-    // filter can still overcount if feed was logged jointly for several cages at once.
-    const sharedSessions = data.some(l => (l.cages||[]).length>1 && (!ff || l.feeds.some(f=>f.id===ff)));
-    totalEl.innerHTML = `Showing: <strong>${sumBags}</strong> bags · <strong>${sumKg.toLocaleString()}</strong> kg${cageNote}`
-      + (sharedSessions ? ` <span style="color:var(--muted);font-weight:400;">(⚠ some of these sessions were logged jointly across multiple cages — totals aren't split per cage)</span>` : '');
-  }
 };
 
 // DELETE — PIN protected. Records are archived to the trash, never wiped outright.
