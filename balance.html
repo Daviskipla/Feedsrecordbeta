@@ -96,14 +96,14 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCNhnHflq1heODof-vdffZUkNTJPQu7fWA",
-  authDomain: "myproject-15210.firebaseapp.com",
-  databaseURL: "https://myproject-15210-default-rtdb.firebaseio.com",
-  projectId: "myproject-15210",
-  storageBucket: "myproject-15210.firebasestorage.app",
-  messagingSenderId: "1081766169567",
-  appId: "1:1081766169567:web:6801690eb2a93a558e526a",
-  measurementId: "G-2VQVL8MZ6B"
+  apiKey: "AIzaSyD59H8-Jerse_KMlHCKehtzrJ-znX00jP0",
+  authDomain: "feedbalancing.firebaseapp.com",
+  databaseURL: "https://feedbalancing-default-rtdb.firebaseio.com",
+  projectId: "feedbalancing",
+  storageBucket: "feedbalancing.firebasestorage.app",
+  messagingSenderId: "465922229901",
+  appId: "1:465922229901:web:7cb8ecd6349082411104c4",
+  measurementId: "G-QYSWBWYSTS"
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -148,7 +148,12 @@ onSnapshot(logsRef, snap => {
   logs = snap.docs.map(d => d.data());
   markConnected();
   render();
-}, err => console.error(err));
+}, err => {
+  // feed_logs may not exist in this dedicated project — that's fine,
+  // it just means "Used (cages)" stays at 0 and you log usage manually below.
+  markConnected();
+  render();
+});
 
 function render(){
   const grid = document.getElementById('grid');
