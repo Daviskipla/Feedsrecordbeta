@@ -3,124 +3,179 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Feed Stock Tracker — Heritage Fish Company</title>
+<title>Feed Stock Tracker</title>
 <style>
   :root {
-    --bg: #0f1613; --panel: #16201b; --panel-2: #1c2721; --border: #2a352e;
-    --text: #eaf2ec; --muted: #8fa396; --accent: #4caf7d; --accent-dark: #357a56;
-    --danger: #d97757; --danger-dark: #b85c3f; --gold: #d4af6a;
+    --bg: #0f1613;
+    --panel: #16201b;
+    --panel-2: #1c2721;
+    --border: #2a352e;
+    --text: #eaf2ec;
+    --muted: #8fa396;
+    --accent: #4caf7d;
+    --accent-dark: #357a56;
+    --danger: #d97757;
+    --danger-dark: #b85c3f;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg); color: var(--text); padding: 16px; max-width: 560px; margin: 0 auto;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+    max-width: 520px;
+    margin: 0 auto;
   }
-  h1 { font-size: 1.25rem; margin: 4px 0 2px; color: var(--gold); }
-  .sub { color: var(--muted); font-size: 0.82rem; margin-bottom: 16px; }
-  .conn { font-size: 0.75rem; color: var(--muted); margin-bottom: 14px; }
+  h1 { font-size: 1.3rem; margin: 4px 0 2px; }
+  .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
+  .conn { font-size: 0.72rem; color: var(--muted); margin-bottom: 14px; }
   .conn.ok { color: var(--accent); }
   .conn.err { color: var(--danger); }
-  .card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-    padding: 14px; margin-bottom: 12px;
+  .balance-card {
+    background: linear-gradient(135deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
   }
-  .card.low { border-color: var(--danger); }
-  .brand { font-weight: 700; font-size: 1rem; }
-  .brand .size { color: var(--muted); font-size: 0.8rem; font-weight: 400; }
-  .row { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
-  .balance { font-size: 1.4rem; font-weight: 700; margin-top: 8px; }
-  .balance .kg { font-size: 0.78rem; color: var(--muted); font-weight: 400; }
-  .low-tag { display: inline-block; margin-top: 6px; background: var(--danger); color: #2a1208; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
-  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
-  button { padding: 9px; border-radius: 9px; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; flex: 1; }
-  .btn-in { background: var(--accent); color: #06210f; }
-  .btn-out { background: var(--danger); color: #2a1208; }
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: flex-end; justify-content: center; z-index: 50; }
-  .overlay.hidden { display: none; }
-  .modal { background: var(--panel-2); border: 1px solid var(--border); border-radius: 16px 16px 0 0; padding: 20px; width: 100%; max-width: 560px; }
-  .modal h2 { margin: 0 0 4px; font-size: 1.05rem; }
-  .modal .sub { margin-bottom: 14px; }
-  .field { margin-bottom: 10px; }
+  .balance-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .balance-num { font-size: 2.4rem; font-weight: 700; line-height: 1.15; margin-top: 2px; }
+  .balance-unit { font-size: 1rem; color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .low-tag { display: inline-block; margin-top: 8px; background: var(--danger); color: #2a1208; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .type-select { margin-top: 12px; }
+  select, input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 1rem;
+  }
+  .form-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .row > * { flex: 1; }
   label { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 4px; }
-  select, input { width: 100%; background: var(--panel); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 9px; font-size: 1rem; }
-  .modal-btns { display: flex; gap: 10px; margin-top: 14px; }
-  .modal-btns button { flex: 1; padding: 12px; }
-  .btn-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-  .err { color: var(--danger); font-size: 0.8rem; min-height: 16px; margin-top: 4px; }
-  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--border); color: var(--text); padding: 10px 16px; border-radius: 10px; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100; }
-  .toast.show { opacity: 1; }
+  .btn-row { display: flex; gap: 10px; margin-top: 4px; }
+  button {
+    flex: 1;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    font-size: 0.98rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-in { background: var(--accent); color: #06210f; }
+  .btn-in:active { background: var(--accent-dark); }
+  .btn-out { background: var(--danger); color: #2a1208; }
+  .btn-out:active { background: var(--danger-dark); }
+  .manage-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    flex: none;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  .log-section h2 {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin: 18px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .entry {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .entry-left { display: flex; flex-direction: column; }
+  .entry-type { font-size: 0.75rem; color: var(--muted); }
+  .entry-date { font-size: 0.72rem; color: var(--muted); }
+  .entry-amt { font-weight: 700; font-size: 1.05rem; }
+  .amt-in { color: var(--accent); }
+  .amt-out { color: var(--danger); }
+  .del { background: none; border: none; color: var(--muted); font-size: 1.1rem; padding: 4px 8px; flex: none; cursor: pointer; }
+  .empty { color: var(--muted); text-align: center; padding: 24px 0; font-size: 0.9rem; }
+  .status { text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: 14px; min-height: 16px; }
+  .new-type-row { display: none; margin-top: 8px; gap: 8px; }
+  .new-type-row.show { display: flex; }
+  .new-type-row button { flex: none; padding: 10px 14px; }
 </style>
 </head>
 <body>
 
-<h1>🧮 Feed Stock Tracker</h1>
-<div class="sub">Heritage Fish Company — live balance, synced with the main app</div>
+<h1>🐟 Feed Stock Tracker</h1>
+<div class="sub">Heritage Fish Company — feed bag inventory</div>
 <div class="conn" id="conn">Connecting…</div>
 
-<div class="btn-row" style="margin-bottom:14px;">
-  <button class="btn-cancel" style="border:1px solid var(--border);color:var(--gold);" onclick="openAddTypeModal()">+ Add New Feed Brand / Type</button>
-</div>
-
-<div id="grid"></div>
-
-<div class="overlay hidden" id="overlay">
-  <div class="modal">
-    <h2 id="mTitle">📦 Receive Stock</h2>
-    <div class="sub" id="mSub">Log feed that's just arrived.</div>
-    <div class="field">
-      <label>Feed Type</label>
-      <select id="mFeed"></select>
-    </div>
-    <div class="field">
-      <label id="mBagsLabel">Bags Received</label>
-      <input type="number" id="mBags" min="1" inputmode="numeric" placeholder="e.g. 400">
-    </div>
-    <div class="field">
-      <label id="mDateLabel">Date</label>
-      <input type="date" id="mDate">
-    </div>
-    <div class="field">
-      <label id="mNoteLabel">Supplier / Note (optional)</label>
-      <input type="text" id="mNote" placeholder="optional">
-    </div>
-    <div class="err" id="mErr"></div>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn-in" id="mSubmit" onclick="submitEntry()">✓ Save</button>
-    </div>
+<div class="balance-card">
+  <div class="balance-label">Current balance</div>
+  <div class="balance-num" id="balanceNum">0<span class="balance-unit">bags</span></div>
+  <div id="lowTag"></div>
+  <div class="type-select">
+    <label for="typeFilter">Feed type</label>
+    <select id="typeFilter"></select>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
-<div class="overlay hidden" id="typeOverlay">
-  <div class="modal">
-    <h2>➕ New Feed Brand / Type</h2>
-    <div class="sub">Add a feed that isn't in the default list (e.g. a new brand, or one bought locally).</div>
-    <div class="field">
-      <label>Brand / Name</label>
-      <input type="text" id="tBrand" placeholder="e.g. Unga Feeds">
+<div class="form-card">
+  <div class="row">
+    <div>
+      <label for="qty">Bags</label>
+      <input type="number" id="qty" min="1" placeholder="e.g. 400" inputmode="numeric">
     </div>
-    <div class="field">
-      <label>Pellet Size (optional)</label>
-      <input type="text" id="tSize" placeholder="e.g. 3mm">
-    </div>
-    <div class="field">
-      <label>Kg per Bag</label>
-      <input type="number" id="tKg" min="1" placeholder="e.g. 25" inputmode="numeric">
-    </div>
-    <div class="err" id="tErr"></div>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeAddTypeModal()">Cancel</button>
-      <button class="btn-in" onclick="submitNewType()">✓ Add Feed Type</button>
+    <div>
+      <label for="entryType">Feed type</label>
+      <select id="entryType"></select>
     </div>
   </div>
+  <div class="row">
+    <div>
+      <label for="entryDate">Date</label>
+      <input type="date" id="entryDate">
+    </div>
+    <div>
+      <label for="note">Note (optional)</label>
+      <input type="text" id="note" placeholder="e.g. Cage D1">
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="btn-in" id="btnIn">+ Received</button>
+    <button class="btn-out" id="btnOut">− Used</button>
+    <button class="manage-btn" id="btnManageType">Add type</button>
+  </div>
+  <div class="new-type-row" id="newTypeRow">
+    <input type="text" id="newTypeInput" placeholder="New feed brand / type name">
+    <button class="btn-in" id="saveNewType" style="flex:none;">Save</button>
+  </div>
 </div>
+
+<div class="log-section">
+  <h2>Recent activity</h2>
+  <div id="logList"></div>
+</div>
+
+<div class="status" id="status">Loading…</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp
+  getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -136,177 +191,200 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const FEEDS = [
-  {id:'growel-2mm',   label:'Growel',   size:'2mm', kg:20},
-  {id:'growel-3mm',   label:'Growel',   size:'3mm', kg:20},
-  {id:'growel-4mm',   label:'Growel',   size:'4mm', kg:20},
-  {id:'optiline-2mm', label:'Optiline', size:'2mm', kg:25},
-  {id:'optiline-3mm', label:'Optiline', size:'3mm', kg:25},
-  {id:'optiline-4mm', label:'Optiline', size:'4mm', kg:25},
-  {id:'optiline-aminova-2mm', label:'Optiline Aminova', size:'2mm', kg:25},
-  {id:'optiline-aminova-3mm', label:'Optiline Aminova', size:'3mm', kg:25},
-  {id:'optiline-aminova-4mm', label:'Optiline Aminova', size:'4mm', kg:25},
+const DEFAULT_FEED_TYPES = [
+  "Growel 2mm", "Growel 3mm", "Growel 4mm",
+  "Optiline 2mm", "Optiline 3mm", "Optiline 4mm",
+  "Optiline Aminova 2mm", "Optiline Aminova 3mm", "Optiline Aminova 4mm"
 ];
 const LOW_STOCK_BAGS = 5;
-let customTypes = [];
-function allFeeds(){ return [...FEEDS, ...customTypes]; }
 
-const customTypesRef = collection(db, 'custom_feed_types');
-onSnapshot(customTypesRef, snap => {
-  customTypes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  markConnected();
-  render();
-}, err => { markConnected(); render(); });
-
-let stockEntries = [];
-let logs = [];
+let entries = [];
+let feedTypes = [...DEFAULT_FEED_TYPES];
 let connCount = 0;
 
-const connEl = document.getElementById('conn');
-function markConnected(){
-  connCount++;
-  if (connCount >= 3){ connEl.textContent = '● Connected — live'; connEl.className = 'conn ok'; }
+const el = id => document.getElementById(id);
+const balanceNum = el('balanceNum');
+const typeFilter = el('typeFilter');
+const entryType = el('entryType');
+const logList = el('logList');
+const statusEl = el('status');
+const entryDate = el('entryDate');
+const connEl = el('conn');
+const lowTag = el('lowTag');
+
+entryDate.valueAsDate = new Date();
+
+function setStatus(msg, timeout) {
+  statusEl.textContent = msg;
+  if (timeout) setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = ''; }, timeout);
 }
 
-const stockEntriesRef = collection(db, 'stock_entries');
-const stockQuery = query(stockEntriesRef, orderBy('date','desc'));
-onSnapshot(stockQuery, snap => {
-  stockEntries = snap.docs.map(d => ({ entryId: d.id, ...d.data() }));
+function markConnected(){
+  connCount++;
+  if (connCount >= 2){ connEl.textContent = '● Connected — live'; connEl.className = 'conn ok'; }
+}
+
+function renderTypeOptions() {
+  const prevFilter = typeFilter.value;
+  const prevEntry = entryType.value;
+  const opts = ['All feed', ...feedTypes].map(t => `<option value="${t}">${t}</option>`).join('');
+  typeFilter.innerHTML = opts;
+  entryType.innerHTML = feedTypes.map(t => `<option value="${t}">${t}</option>`).join('')
+    || `<option value="General">General</option>`;
+  if (prevFilter && [...typeFilter.options].some(o=>o.value===prevFilter)) typeFilter.value = prevFilter;
+  if (prevEntry && [...entryType.options].some(o=>o.value===prevEntry)) entryType.value = prevEntry;
+}
+
+function computeBalance(type) {
+  return entries
+    .filter(e => type === 'All feed' || e.type === type)
+    .reduce((sum, e) => sum + (e.direction === 'in' ? e.qty : -e.qty), 0);
+}
+
+function renderBalance() {
+  const type = typeFilter.value || 'All feed';
+  const bal = computeBalance(type);
+  balanceNum.innerHTML = `${bal}<span class="balance-unit">bags</span>`;
+  lowTag.innerHTML = (type !== 'All feed' && bal <= LOW_STOCK_BAGS) ? '<div class="low-tag">⚠ Low Stock</div>' : '';
+}
+
+function renderLog() {
+  const type = typeFilter.value || 'All feed';
+  const filtered = entries
+    .filter(e => type === 'All feed' || e.type === type)
+    .sort((a, b) => new Date(b.date) - new Date(a.date) || (b.ts||0) - (a.ts||0));
+
+  if (filtered.length === 0) {
+    logList.innerHTML = `<div class="empty">No entries yet. Log your first delivery or usage above.</div>`;
+    return;
+  }
+
+  logList.innerHTML = filtered.map(e => `
+    <div class="entry">
+      <div class="entry-left">
+        <div class="entry-amt ${e.direction === 'in' ? 'amt-in' : 'amt-out'}">${e.direction === 'in' ? '+' : '−'}${e.qty} bags</div>
+        <div class="entry-type">${e.type}${e.note ? ' · ' + e.note : ''}</div>
+        <div class="entry-date">${e.date}</div>
+      </div>
+      <button class="del" data-id="${e.entryId}">✕</button>
+    </div>
+  `).join('');
+
+  logList.querySelectorAll('.del').forEach(btn => {
+    btn.onclick = () => deleteEntry(btn.dataset.id);
+  });
+}
+
+function renderAll() {
+  renderBalance();
+  renderLog();
+}
+
+// ---- Firestore: stock entries (received/used) ----
+const entriesRef = collection(db, 'stock_entries_simple');
+const entriesQuery = query(entriesRef, orderBy('date', 'desc'));
+onSnapshot(entriesQuery, snap => {
+  entries = snap.docs.map(d => {
+    const data = d.data();
+    return {
+      entryId: d.id,
+      direction: data.kind === 'used' ? 'out' : 'in',
+      qty: data.bags || 0,
+      type: data.type,
+      date: data.date,
+      note: data.note || '',
+      ts: data.createdAt ? data.createdAt.toMillis?.() : 0
+    };
+  });
   markConnected();
-  render();
+  renderAll();
+  setStatus('Synced', 1200);
 }, err => {
   connEl.textContent = '⚠ Could not connect — check internet or Firebase rules';
   connEl.className = 'conn err';
+  setStatus('Sync failed — check connection', 3000);
   console.error(err);
 });
 
-const logsRef = collection(db, 'feed_logs');
-onSnapshot(logsRef, snap => {
-  logs = snap.docs.map(d => d.data());
+// ---- Firestore: custom feed types ----
+const typesRef = collection(db, 'custom_feed_types_simple');
+onSnapshot(typesRef, snap => {
+  const custom = snap.docs.map(d => d.data().name).filter(Boolean);
+  feedTypes = [...new Set([...DEFAULT_FEED_TYPES, ...custom])];
   markConnected();
-  render();
-}, err => {
-  // feed_logs may not exist in this dedicated project — that's fine,
-  // it just means "Used (cages)" stays at 0 and you log usage manually below.
-  markConnected();
-  render();
-});
+  renderTypeOptions();
+  renderAll();
+}, err => { markConnected(); console.error(err); });
 
-function render(){
-  const grid = document.getElementById('grid');
-  grid.innerHTML = allFeeds().map(f => {
-    const receivedBags = stockEntries.filter(s=>s.feedId===f.id && s.kind!=='used').reduce((s,e)=>s+(e.bags||0),0);
-    const manualUsedBags = stockEntries.filter(s=>s.feedId===f.id && s.kind==='used').reduce((s,e)=>s+(e.bags||0),0);
-    const cageUsedBags = logs.reduce((s,l)=> s + (l.feeds||[]).filter(x=>x.id===f.id).reduce((s2,x)=>s2+(x.qty||0),0), 0);
-    const usedBags = cageUsedBags + manualUsedBags;
-    const balance = receivedBags - usedBags;
-    const low = balance <= LOW_STOCK_BAGS;
-    return `
-      <div class="card${low?' low':''}">
-        <div class="brand">${f.label} <span class="size">${f.size}</span></div>
-        <div class="row"><span>Received</span><span>${receivedBags} bags</span></div>
-        <div class="row"><span>Used (cages)</span><span>${cageUsedBags} bags</span></div>
-        ${manualUsedBags ? `<div class="row"><span>Used (no cage)</span><span>${manualUsedBags} bags</span></div>` : ''}
-        <div class="balance">${balance.toLocaleString()} bags <span class="kg">(${(balance*f.kg).toLocaleString()} kg)</span></div>
-        ${low ? '<div class="low-tag">⚠ Low Stock</div>' : ''}
-        <div class="btn-row">
-          <button class="btn-in" onclick="openModal('received','${f.id}')">+ Received</button>
-          <button class="btn-out" onclick="openModal('used','${f.id}')">− Used</button>
-        </div>
-      </div>`;
-  }).join('');
-}
+async function addEntry(direction) {
+  const qty = parseInt(el('qty').value, 10);
+  if (!qty || qty <= 0) {
+    setStatus('Enter a valid bag count', 2000);
+    return;
+  }
+  const type = entryType.value || 'General';
+  const date = entryDate.value || new Date().toISOString().slice(0, 10);
+  const note = el('note').value.trim();
 
-function feedOptions(selectedId){
-  return allFeeds().map(f => `<option value="${f.id}" ${f.id===selectedId?'selected':''}>${f.label} ${f.size||''}</option>`).join('');
-}
-
-window.openAddTypeModal = function(){
-  document.getElementById('tBrand').value = '';
-  document.getElementById('tSize').value = '';
-  document.getElementById('tKg').value = '';
-  document.getElementById('tErr').textContent = '';
-  document.getElementById('typeOverlay').classList.remove('hidden');
-};
-window.closeAddTypeModal = function(){
-  document.getElementById('typeOverlay').classList.add('hidden');
-};
-window.submitNewType = async function(){
-  const brand = document.getElementById('tBrand').value.trim();
-  const size = document.getElementById('tSize').value.trim();
-  const kg = parseInt(document.getElementById('tKg').value) || 0;
-  const err = document.getElementById('tErr');
-  if (!brand){ err.textContent = '⚠ Enter a brand or feed name.'; return; }
-  if (kg <= 0){ err.textContent = '⚠ Enter kg per bag.'; return; }
-  const id = (brand + '-' + (size||'std')).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
-  if (allFeeds().some(f=>f.id===id)){ err.textContent = '⚠ That feed type already exists.'; return; }
   try {
-    await addDoc(customTypesRef, { id, label: brand, size, kg });
-    closeAddTypeModal();
-    showToast('✓ Feed type added: ' + brand + (size ? ' ' + size : ''));
-  } catch(e){
-    console.error(e);
-    err.textContent = '⚠ Could not save: ' + (e.message || 'check connection.');
+    await addDoc(entriesRef, {
+      type, bags: qty, date, note,
+      kind: direction === 'in' ? 'received' : 'used',
+      createdAt: serverTimestamp()
+    });
+    el('qty').value = '';
+    el('note').value = '';
+    setStatus('Saved', 1200);
+  } catch (err) {
+    console.error(err);
+    setStatus(err.code === 'permission-denied'
+      ? 'Blocked by Firestore rules — allow "stock_entries_simple"'
+      : 'Save failed — check connection', 3500);
   }
-};
-
-window.openModal = function(kind, feedId){
-  document.getElementById('overlay').dataset.kind = kind;
-  document.getElementById('mFeed').innerHTML = feedOptions(feedId);
-  document.getElementById('mBags').value = '';
-  document.getElementById('mNote').value = '';
-  document.getElementById('mErr').textContent = '';
-  document.getElementById('mDate').valueAsDate = new Date();
-  if (kind === 'used'){
-    document.getElementById('mTitle').textContent = '➖ Record Stock Used';
-    document.getElementById('mSub').textContent = "For feed used without going through a cage (samples, spillage, etc).";
-    document.getElementById('mBagsLabel').textContent = 'Bags Used';
-    document.getElementById('mDateLabel').textContent = 'Date Used';
-    document.getElementById('mNoteLabel').textContent = 'Reason / Note (optional)';
-    document.getElementById('mSubmit').className = 'btn-out';
-    document.getElementById('mSubmit').textContent = '✓ Save Stock Used';
-  } else {
-    document.getElementById('mTitle').textContent = '📦 Receive Stock';
-    document.getElementById('mSub').textContent = "Log feed that's just arrived so the balance stays accurate.";
-    document.getElementById('mBagsLabel').textContent = 'Bags Received';
-    document.getElementById('mDateLabel').textContent = 'Date Received';
-    document.getElementById('mNoteLabel').textContent = 'Supplier / Note (optional)';
-    document.getElementById('mSubmit').className = 'btn-in';
-    document.getElementById('mSubmit').textContent = '✓ Save Stock Received';
-  }
-  document.getElementById('overlay').classList.remove('hidden');
-};
-window.closeModal = function(){
-  document.getElementById('overlay').classList.add('hidden');
-};
-
-window.submitEntry = async function(){
-  const kind = document.getElementById('overlay').dataset.kind || 'received';
-  const feedId = document.getElementById('mFeed').value;
-  const bags = parseInt(document.getElementById('mBags').value) || 0;
-  const date = document.getElementById('mDate').value;
-  const note = document.getElementById('mNote').value.trim();
-  const err = document.getElementById('mErr');
-  if (bags <= 0){ err.textContent = kind==='used' ? '⚠ Enter how many bags were used.' : '⚠ Enter how many bags were received.'; return; }
-  if (!date){ err.textContent = '⚠ Please pick a date.'; return; }
-  try {
-    await addDoc(stockEntriesRef, { feedId, bags, date, note, kind, createdAt: serverTimestamp() });
-    closeModal();
-    showToast(kind==='used' ? '✓ Stock usage logged' : '✓ Stock received logged');
-  } catch(e){
-    console.error(e);
-    err.textContent = e.code === 'permission-denied'
-      ? '⚠ Database rules are blocking this — ask whoever manages Firebase to allow the "stock_entries" collection.'
-      : '⚠ Could not save: ' + (e.message || 'check connection.');
-  }
-};
-
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=> t.classList.remove('show'), 2200);
 }
+
+async function deleteEntry(id) {
+  try {
+    await deleteDoc(doc(db, 'stock_entries_simple', id));
+    setStatus('Removed', 1200);
+  } catch (err) {
+    console.error(err);
+    setStatus('Could not remove — check connection', 3000);
+  }
+}
+
+el('btnIn').onclick = () => addEntry('in');
+el('btnOut').onclick = () => addEntry('out');
+typeFilter.onchange = renderAll;
+
+el('btnManageType').onclick = () => {
+  el('newTypeRow').classList.toggle('show');
+};
+el('saveNewType').onclick = async () => {
+  const name = el('newTypeInput').value.trim();
+  if (!name) return;
+  if (feedTypes.includes(name)) {
+    el('newTypeInput').value = '';
+    el('newTypeRow').classList.remove('show');
+    entryType.value = name;
+    return;
+  }
+  try {
+    await addDoc(typesRef, { name });
+    entryType.value = name;
+    setStatus('Feed type added', 1200);
+  } catch (err) {
+    console.error(err);
+    setStatus(err.code === 'permission-denied'
+      ? 'Blocked by Firestore rules — allow "custom_feed_types_simple"'
+      : 'Could not save type', 3000);
+  }
+  el('newTypeInput').value = '';
+  el('newTypeRow').classList.remove('show');
+};
+
+renderTypeOptions();
+renderAll();
 </script>
 
 </body>
