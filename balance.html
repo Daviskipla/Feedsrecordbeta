@@ -57,6 +57,10 @@
 <div class="sub">Heritage Fish Company — live balance, synced with the main app</div>
 <div class="conn" id="conn">Connecting…</div>
 
+<div class="btn-row" style="margin-bottom:14px;">
+  <button class="btn-cancel" style="border:1px solid var(--border);color:var(--gold);" onclick="openAddTypeModal()">+ Add New Feed Brand / Type</button>
+</div>
+
 <div id="grid"></div>
 
 <div class="overlay hidden" id="overlay">
@@ -89,6 +93,30 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="overlay hidden" id="typeOverlay">
+  <div class="modal">
+    <h2>➕ New Feed Brand / Type</h2>
+    <div class="sub">Add a feed that isn't in the default list (e.g. a new brand, or one bought locally).</div>
+    <div class="field">
+      <label>Brand / Name</label>
+      <input type="text" id="tBrand" placeholder="e.g. Unga Feeds">
+    </div>
+    <div class="field">
+      <label>Pellet Size (optional)</label>
+      <input type="text" id="tSize" placeholder="e.g. 3mm">
+    </div>
+    <div class="field">
+      <label>Kg per Bag</label>
+      <input type="number" id="tKg" min="1" placeholder="e.g. 25" inputmode="numeric">
+    </div>
+    <div class="err" id="tErr"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeAddTypeModal()">Cancel</button>
+      <button class="btn-in" onclick="submitNewType()">✓ Add Feed Type</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -120,6 +148,15 @@ const FEEDS = [
   {id:'optiline-aminova-4mm', label:'Optiline Aminova', size:'4mm', kg:25},
 ];
 const LOW_STOCK_BAGS = 5;
+let customTypes = [];
+function allFeeds(){ return [...FEEDS, ...customTypes]; }
+
+const customTypesRef = collection(db, 'custom_feed_types');
+onSnapshot(customTypesRef, snap => {
+  customTypes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  markConnected();
+  render();
+}, err => { markConnected(); render(); });
 
 let stockEntries = [];
 let logs = [];
@@ -128,7 +165,7 @@ let connCount = 0;
 const connEl = document.getElementById('conn');
 function markConnected(){
   connCount++;
-  if (connCount >= 2){ connEl.textContent = '● Connected — live'; connEl.className = 'conn ok'; }
+  if (connCount >= 3){ connEl.textContent = '● Connected — live'; connEl.className = 'conn ok'; }
 }
 
 const stockEntriesRef = collection(db, 'stock_entries');
@@ -157,7 +194,7 @@ onSnapshot(logsRef, snap => {
 
 function render(){
   const grid = document.getElementById('grid');
-  grid.innerHTML = FEEDS.map(f => {
+  grid.innerHTML = allFeeds().map(f => {
     const receivedBags = stockEntries.filter(s=>s.feedId===f.id && s.kind!=='used').reduce((s,e)=>s+(e.bags||0),0);
     const manualUsedBags = stockEntries.filter(s=>s.feedId===f.id && s.kind==='used').reduce((s,e)=>s+(e.bags||0),0);
     const cageUsedBags = logs.reduce((s,l)=> s + (l.feeds||[]).filter(x=>x.id===f.id).reduce((s2,x)=>s2+(x.qty||0),0), 0);
@@ -181,8 +218,37 @@ function render(){
 }
 
 function feedOptions(selectedId){
-  return FEEDS.map(f => `<option value="${f.id}" ${f.id===selectedId?'selected':''}>${f.label} ${f.size}</option>`).join('');
+  return allFeeds().map(f => `<option value="${f.id}" ${f.id===selectedId?'selected':''}>${f.label} ${f.size||''}</option>`).join('');
 }
+
+window.openAddTypeModal = function(){
+  document.getElementById('tBrand').value = '';
+  document.getElementById('tSize').value = '';
+  document.getElementById('tKg').value = '';
+  document.getElementById('tErr').textContent = '';
+  document.getElementById('typeOverlay').classList.remove('hidden');
+};
+window.closeAddTypeModal = function(){
+  document.getElementById('typeOverlay').classList.add('hidden');
+};
+window.submitNewType = async function(){
+  const brand = document.getElementById('tBrand').value.trim();
+  const size = document.getElementById('tSize').value.trim();
+  const kg = parseInt(document.getElementById('tKg').value) || 0;
+  const err = document.getElementById('tErr');
+  if (!brand){ err.textContent = '⚠ Enter a brand or feed name.'; return; }
+  if (kg <= 0){ err.textContent = '⚠ Enter kg per bag.'; return; }
+  const id = (brand + '-' + (size||'std')).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  if (allFeeds().some(f=>f.id===id)){ err.textContent = '⚠ That feed type already exists.'; return; }
+  try {
+    await addDoc(customTypesRef, { id, label: brand, size, kg });
+    closeAddTypeModal();
+    showToast('✓ Feed type added: ' + brand + (size ? ' ' + size : ''));
+  } catch(e){
+    console.error(e);
+    err.textContent = '⚠ Could not save: ' + (e.message || 'check connection.');
+  }
+};
 
 window.openModal = function(kind, feedId){
   document.getElementById('overlay').dataset.kind = kind;
