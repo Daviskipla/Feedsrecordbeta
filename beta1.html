@@ -93,23 +93,12 @@ header{border-bottom:1px solid var(--border);padding:0;margin-bottom:28px;positi
 .qbtn{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:var(--sans);font-size:12px;font-weight:600;transition:all 0.15s;}
 .qbtn:hover{border-color:var(--gold);color:var(--gold);}
 .section-group{margin-bottom:20px;}
-.sec-badge-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:5px;display:inline-block;margin-bottom:10px;}
-.sg-A .sec-badge-label{background:rgba(76,175,125,0.15);color:var(--green);}
-.sg-B .sec-badge-label{background:rgba(200,168,75,0.15);color:var(--gold);}
-.sg-C .sec-badge-label{background:rgba(224,112,96,0.15);color:var(--coral);}
-.sg-D .sec-badge-label{background:rgba(45,125,154,0.15);color:var(--water);}
+.sec-badge-label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:5px;display:inline-block;margin-bottom:10px;background:var(--sec-color-soft);color:var(--sec-color);}
 .cage-row{display:flex;flex-wrap:wrap;gap:10px;}
 .cage-tile{width:90px;background:rgba(17,43,30,0.8);border:2px solid var(--border);border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;transition:all 0.2s;position:relative;overflow:hidden;flex-shrink:0;}
 .cage-tile:hover{transform:translateY(-2px);}
-.sg-A .cage-tile:hover,.sg-A .cage-tile.sel{border-color:var(--green);background:rgba(76,175,125,0.1);}
-.sg-B .cage-tile:hover,.sg-B .cage-tile.sel{border-color:var(--gold);background:rgba(200,168,75,0.1);}
-.sg-C .cage-tile:hover,.sg-C .cage-tile.sel{border-color:var(--coral);background:rgba(224,112,96,0.1);}
-.sg-D .cage-tile:hover,.sg-D .cage-tile.sel{border-color:var(--water);background:rgba(45,125,154,0.1);}
-.cage-id{font-family:var(--serif);font-size:20px;font-weight:700;line-height:1;}
-.sg-A .cage-id{color:var(--green);}
-.sg-B .cage-id{color:var(--gold);}
-.sg-C .cage-id{color:var(--coral);}
-.sg-D .cage-id{color:var(--water);}
+.section-group .cage-tile:hover,.section-group .cage-tile.sel{border-color:var(--sec-color);background:var(--sec-color-tile);}
+.cage-id{font-family:var(--serif);font-size:20px;font-weight:700;line-height:1;color:var(--sec-color);}
 .cage-status{font-size:10px;font-family:var(--mono);color:var(--muted);margin-top:4px;}
 .fed-pip{width:7px;height:7px;border-radius:50%;background:var(--green);position:absolute;top:7px;right:7px;box-shadow:0 0 8px var(--green);}
 .sel-summary{font-size:13px;color:var(--muted);font-family:var(--mono);margin-top:10px;}
@@ -253,10 +242,6 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 .cage-report-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;}
 .cage-report-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
 .cage-report-id{font-family:var(--serif);font-size:18px;font-weight:700;margin-bottom:10px;}
-.sg-A .cage-report-id{color:var(--green);}
-.sg-B .cage-report-id{color:var(--gold);}
-.sg-C .cage-report-id{color:var(--coral);}
-.sg-D .cage-report-id{color:var(--water);}
 .cage-feed-line{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(200,168,75,0.08);}
 .cage-feed-line:last-child{border-bottom:none;}
 .cage-feed-name{color:var(--muted);}
@@ -474,6 +459,24 @@ tbody td{padding:11px 14px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- ======== TRANSFER HISTORY MODAL ======== -->
+<div class="trash-overlay hidden" id="transfer-history-overlay">
+  <div class="trash-box">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title">📜 Transfer History</div>
+        <div class="dl-sub">Every cage transfer, with the feed each cage had eaten at the time it moved.</div>
+      </div>
+      <button class="dl-close" onclick="closeTransferHistoryModal()">&#x2715;</button>
+    </div>
+    <div id="transfer-history-list"></div>
+    <div id="transfer-history-empty" class="empty" style="display:none">
+      <div class="ico">📜</div>
+      <p>No transfers logged yet.</p>
+    </div>
+  </div>
+</div>
+
 <!-- ======== STOCK MOVEMENT MODAL (Receive / Use) ======== -->
 <div class="stock-add-overlay hidden" id="stock-add-overlay">
   <div class="stock-add-box">
@@ -547,6 +550,79 @@ tbody td{padding:11px 14px;vertical-align:middle;}
   </div>
 </div>
 
+<!-- ======== TRANSFER CAGE MODAL ======== -->
+<div class="stock-add-overlay hidden" id="transfer-cage-overlay">
+  <div class="stock-add-box" style="width:480px;">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title">🔁 Transfer Cage</div>
+        <div class="dl-sub">Move a cage's whole feed history to a different cage id — e.g. fish moved from A1 to D6.</div>
+      </div>
+      <button class="dl-close" onclick="closeTransferCageModal()">&#x2715;</button>
+    </div>
+    <div class="form-row">
+      <div class="field-row" style="margin-bottom:0;">
+        <div class="field-label">From Cage</div>
+        <select class="field-select" id="tc-from"></select>
+      </div>
+      <div class="field-row" style="margin-bottom:0;">
+        <div class="field-label">To Cage</div>
+        <select class="field-select" id="tc-to"></select>
+      </div>
+    </div>
+    <div id="tc-preview" style="font-size:12px;color:var(--muted);margin:4px 0 10px;"></div>
+    <div id="tc-err" style="color:var(--coral);font-size:13px;margin-bottom:10px;"></div>
+    <button class="btn-gold" onclick="confirmTransferCage()" style="width:100%;padding:13px;font-size:14px;">✓ Transfer History</button>
+  </div>
+</div>
+
+<!-- ======== ADD CAGE MODAL ======== -->
+<div class="stock-add-overlay hidden" id="add-cage-overlay">
+  <div class="stock-add-box" style="width:440px;">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title">➕ Add Cage</div>
+        <div class="dl-sub">Add another cage to an existing section — it shows up everywhere automatically.</div>
+      </div>
+      <button class="dl-close" onclick="closeAddCageModal()">&#x2715;</button>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Section</div>
+      <select class="field-select" id="ac-section" onchange="updateAddCageSuggestion()"></select>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Cage ID</div>
+      <input type="text" class="field-inp" id="ac-cageid" placeholder="e.g. A4">
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin:-8px 0 10px;">Suggested next ID is filled in — change it if you'd rather use a different name.</div>
+    <div id="ac-err" style="color:var(--coral);font-size:13px;margin-bottom:10px;"></div>
+    <button class="btn-gold" onclick="confirmAddCage()" style="width:100%;padding:13px;font-size:14px;">✓ Add Cage</button>
+  </div>
+</div>
+
+<!-- ======== ADD SECTION MODAL ======== -->
+<div class="stock-add-overlay hidden" id="add-section-overlay">
+  <div class="stock-add-box" style="width:440px;">
+    <div class="dl-header">
+      <div>
+        <div class="dl-title">➕ Add Section</div>
+        <div class="dl-sub">Create a brand new section (e.g. Section E) with its first cage.</div>
+      </div>
+      <button class="dl-close" onclick="closeAddSectionModal()">&#x2715;</button>
+    </div>
+    <div class="field-row">
+      <div class="field-label">Section Letter / ID</div>
+      <input type="text" class="field-inp" id="as-section" placeholder="e.g. E" maxlength="3" oninput="updateAddSectionSuggestion()">
+    </div>
+    <div class="field-row">
+      <div class="field-label">First Cage ID</div>
+      <input type="text" class="field-inp" id="as-cageid" placeholder="e.g. E1">
+    </div>
+    <div id="as-err" style="color:var(--coral);font-size:13px;margin-bottom:10px;"></div>
+    <button class="btn-gold" onclick="confirmAddSection()" style="width:100%;padding:13px;font-size:14px;">✓ Create Section</button>
+  </div>
+</div>
+
 <!-- ======== HEADER ======== -->
 <header>
   <div class="header-bg"></div>
@@ -609,12 +685,14 @@ tbody td{padding:11px 14px;vertical-align:middle;}
       <div class="sec-title">Step 1 — Select Cage(s)</div>
       <div class="quick-row">
         <span class="q-label">Quick:</span>
-        <button class="qbtn" onclick="selSec('A')">All Section A</button>
-        <button class="qbtn" onclick="selSec('B')">All Section B</button>
-        <button class="qbtn" onclick="selSec('C')">All Section C</button>
-        <button class="qbtn" onclick="selSec('D')">All Section D</button>
+        <span id="quick-section-btns"></span>
         <button class="qbtn" onclick="selAll()">All Cages</button>
         <button class="qbtn" onclick="clearSel()">Clear</button>
+      </div>
+      <div class="quick-row">
+        <span class="q-label">Manage:</span>
+        <button class="qbtn" onclick="openAddCageModal()">➕ Add Cage</button>
+        <button class="qbtn" onclick="openAddSectionModal()">➕ Add Section</button>
       </div>
       <div id="cage-container"></div>
       <div class="hatchery-wrap">
@@ -673,6 +751,8 @@ tbody td{padding:11px 14px;vertical-align:middle;}
         <option value="month">This Month</option>
       </select>
       <button class="btn-ghost" onclick="exportCSV()">&#8595; Export CSV</button>
+      <button class="btn-ghost" onclick="openTransferCageModal()">🔁 Transfer Cage</button>
+      <button class="btn-ghost btn-trash" onclick="openTransferHistoryModal()">📜 Transfer History<span class="trash-badge zero" id="transfer-badge">0</span></button>
       <button class="btn-danger" onclick="clearCageRecords()">🗑 Clear Cage Records</button>
       <button class="btn-ghost btn-trash" onclick="openTrashModal()">🗂 Recently Deleted<span class="trash-badge zero" id="trash-badge">0</span></button>
     </div>
@@ -714,23 +794,6 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 
   <!-- ========== STOCK CHECK PAGE ========== -->
   <div id="pg-stock" class="page">
-    <div class="sec-title">Current Stock Balance</div>
-    <div class="card" style="padding:22px;">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
-        Balance = total stock received − total fed out so far, worked out automatically from your feeding records.
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
-        <button class="btn-gold" onclick="openStockAddModal('received')" style="padding:11px 24px;font-size:14px;">+ Receive Stock</button>
-        <button class="btn-danger" onclick="openStockAddModal('used')">− Record Stock Used (no cage)</button>
-        <button class="btn-ghost" id="stock-history-btn" onclick="toggleStockHistory()">📜 Stock Received History</button>
-      </div>
-      <div id="stock-balance-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;"></div>
-      <div id="stock-history-panel" style="display:none;margin-top:18px;border-top:1px solid var(--border);padding-top:16px;">
-        <div id="stock-history-list"></div>
-        <div id="stock-history-empty" class="empty" style="display:none;"><div class="ico">📜</div><p>No stock has been logged as received yet.</p></div>
-      </div>
-    </div>
-
     <div class="sec-title">Date Range Stock Analysis</div>
 
     <div class="card" style="padding:22px;">
@@ -924,7 +987,7 @@ tbody td{padding:11px 14px;vertical-align:middle;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc,
+  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, setDoc,
   onSnapshot, query, orderBy, serverTimestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -1001,11 +1064,11 @@ function updatePinDots(){
 }
 
 // ====================== CONSTANTS ======================
-const CAGES = {
+let CAGES = {
   A: ['A1','A2','A3'],
   B: ['B1','B2','B3'],
   C: ['C1','C2','C3'],
-  D: ['D1','D2','D3','D4']
+  D: ['D1','D2','D3','D4','D5','D6']
 };
 const FEEDS = [
   {id:'growel-2mm',   label:'Growel',   size:'2mm', kg:20, type:'growel'},
@@ -1019,6 +1082,27 @@ const FEEDS = [
   {id:'optiline-aminova-4mm', label:'Optiline Aminova', size:'4mm', kg:25, type:'aminova'},
 ];
 const HATCHERY_ID = 'Hatchery';
+
+// Section colors are assigned by position so any number of sections (A, B, C... E, F...) get a distinct color automatically.
+const SECTION_COLORS = ['#4caf7d','#c8a84b','#e07060','#2d7d9a','#f0a04b','#9b7fd4','#e0598f','#5bc0be','#c9a227','#7dbfa0'];
+function hexToRgba(hex, alpha){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function getSectionColor(sec){
+  const idx = Object.keys(CAGES).indexOf(sec);
+  return SECTION_COLORS[(idx >= 0 ? idx : 0) % SECTION_COLORS.length];
+}
+function suggestNextCageId(sec){
+  const cids = CAGES[sec] || [];
+  const nums = cids.map(c=>{
+    const m = c.match(/(\d+)$/);
+    return m ? parseInt(m[1],10) : null;
+  }).filter(n=>n!==null);
+  const next = nums.length ? Math.max(...nums)+1 : 1;
+  return `${sec}${next}`;
+}
 
 let selCages = new Set();
 let feedQty  = {}; FEEDS.forEach(f => feedQty[f.id] = 0);
@@ -1081,6 +1165,38 @@ onSnapshot(logsQuery, (snapshot)=>{
   toast('⚠ Database connection error');
 });
 
+// ====================== CAGE CONFIG LISTENER ======================
+const cageConfigRef = doc(db, 'config', 'cages');
+onSnapshot(cageConfigRef, (snap)=>{
+  if(snap.exists() && snap.data().sections){
+    const raw = snap.data().sections;
+    CAGES = Object.keys(raw).sort().reduce((acc,k)=>{ acc[k] = raw[k]; return acc; }, {});
+  } else {
+    // First run: seed Firestore with the current defaults so it becomes the shared source of truth.
+    setDoc(cageConfigRef, { sections: CAGES }).catch(e=>console.error('Could not seed cage config:', e));
+  }
+  onCagesUpdated();
+}, (error)=>{
+  console.error('Firestore error (cage config):', error);
+  if(error.code === 'permission-denied'){
+    toast('⚠ Database rules are blocking cage setup — ask whoever manages Firebase to allow the "config" collection.');
+  }
+});
+
+function onCagesUpdated(){
+  buildCages();
+  renderSectionQuickButtons();
+  if(document.getElementById('fl-cage')) populateFilters();
+  if(document.getElementById('rpt-cage')) populateMonthlySelectors();
+  if(document.getElementById('stock-cage')) populateStockCageFilter();
+}
+
+function renderSectionQuickButtons(){
+  const wrap = document.getElementById('quick-section-btns');
+  if(!wrap) return;
+  wrap.innerHTML = Object.keys(CAGES).map(sec=>`<button class="qbtn" onclick="selSec('${sec}')">All Section ${sec}</button>`).join('');
+}
+
 // ====================== TRASH (RECENTLY DELETED) LISTENER ======================
 const deletedLogsRef   = collection(db, 'deleted_feed_logs');
 const deletedLogsQuery = query(deletedLogsRef, orderBy('deletedAt','desc'));
@@ -1100,6 +1216,26 @@ onSnapshot(deletedLogsQuery, (snapshot)=>{
   }
 });
 
+// ====================== TRANSFER HISTORY LISTENER ======================
+const transferLogsRef   = collection(db, 'transfer_logs');
+const transferLogsQuery = query(transferLogsRef, orderBy('transferredAt','desc'));
+let transferLogs = [];
+
+onSnapshot(transferLogsQuery, (snapshot)=>{
+  transferLogs = snapshot.docs.map(d=>({ transferId: d.id, ...d.data() }));
+  const badge = document.getElementById('transfer-badge');
+  if(badge){
+    badge.textContent = transferLogs.length;
+    badge.classList.toggle('zero', transferLogs.length === 0);
+  }
+  if(!document.getElementById('transfer-history-overlay').classList.contains('hidden')) renderTransferHistory();
+}, (error)=>{
+  console.error('Firestore error (transfer history):', error);
+  if(error.code === 'permission-denied'){
+    toast('⚠ Database rules are blocking Transfer History — ask whoever manages Firebase to allow the "transfer_logs" collection.');
+  }
+});
+
 // ====================== STOCK BALANCE LISTENER ======================
 const stockEntriesRef   = collection(db, 'stock_entries');
 const stockEntriesQuery = query(stockEntriesRef, orderBy('date','desc'));
@@ -1109,7 +1245,8 @@ const LOW_STOCK_BAGS = 5;
 onSnapshot(stockEntriesQuery, (snapshot)=>{
   stockEntries = snapshot.docs.map(d=>({ entryId: d.id, ...d.data() }));
   renderStockBalance();
-  if(document.getElementById('stock-history-panel').style.display !== 'none') renderStockHistory();
+  const histPanel = document.getElementById('stock-history-panel');
+  if(histPanel && histPanel.style.display !== 'none') renderStockHistory();
 }, (error)=>{
   console.error('Firestore error (stock):', error);
   if(error.code === 'permission-denied'){
@@ -1254,8 +1391,12 @@ function buildCages(){
   const c = document.getElementById('cage-container');
   c.innerHTML = '';
   Object.entries(CAGES).forEach(([sec,cids])=>{
+    const color = getSectionColor(sec);
     const wrap = document.createElement('div');
-    wrap.className = `section-group sg-${sec}`;
+    wrap.className = 'section-group';
+    wrap.style.setProperty('--sec-color', color);
+    wrap.style.setProperty('--sec-color-soft', hexToRgba(color,0.15));
+    wrap.style.setProperty('--sec-color-tile', hexToRgba(color,0.1));
     const lbl = document.createElement('div');
     lbl.className = 'sec-badge-label';
     lbl.textContent = `Section ${sec}`;
@@ -1627,6 +1768,156 @@ window.saveEditLog = function(){
 };
 
 
+window.openTransferCageModal = function(){
+  const allC = [...Object.values(CAGES).flat(), HATCHERY_ID];
+  const opts = allC.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const fromSel = document.getElementById('tc-from');
+  const toSel   = document.getElementById('tc-to');
+  fromSel.innerHTML = opts;
+  toSel.innerHTML = opts;
+  if(allC.length > 1) toSel.value = allC[1];
+  document.getElementById('tc-err').textContent = '';
+  updateTransferPreview();
+  document.getElementById('transfer-cage-overlay').classList.remove('hidden');
+};
+window.closeTransferCageModal = function(){
+  document.getElementById('transfer-cage-overlay').classList.add('hidden');
+};
+window.updateTransferPreview = function(){
+  const from = document.getElementById('tc-from').value;
+  const matches = logs.filter(l => l.cages && l.cages.includes(from));
+  const totalKg = matches.reduce((s,l)=> s + l.feeds.reduce((s2,f)=> s2 + f.qty*f.kg, 0), 0);
+  document.getElementById('tc-preview').textContent = matches.length
+    ? `${matches.length} record(s) on ${from} — ${totalKg.toLocaleString()} kg total will move.`
+    : `No records found for ${from} yet.`;
+};
+document.addEventListener('change', (e)=>{ if(e.target && e.target.id === 'tc-from') updateTransferPreview(); });
+
+window.confirmTransferCage = function(){
+  const err  = document.getElementById('tc-err');
+  const from = document.getElementById('tc-from').value;
+  const to   = document.getElementById('tc-to').value;
+  if(!from || !to){ err.textContent = '⚠ Pick both cages.'; return; }
+  if(from === to){ err.textContent = '⚠ From and To cages must be different.'; return; }
+  const matches = logs.filter(l => l.cages && l.cages.includes(from));
+  if(!matches.length){ err.textContent = `⚠ No records found for cage ${from}.`; return; }
+  const totalKg = matches.reduce((s,l)=> s + l.feeds.reduce((s2,f)=> s2 + f.qty*f.kg, 0), 0);
+  if(!confirm(`Move all ${matches.length} record(s) — ${totalKg.toLocaleString()} kg total — from ${from} to ${to}?\n\nEvery matching record will be relabeled to ${to}, so all reports, totals and charts move over automatically. This can't be undone from here.`)) return;
+  requirePin(async ()=>{
+    showSync(`Transferring ${from} → ${to}…`);
+    try {
+      const feedBreakdown = {};
+      matches.forEach(l=>{
+        l.feeds.forEach(f=>{
+          const key = f.id;
+          if(!feedBreakdown[key]) feedBreakdown[key] = { label:f.label, size:f.size, qty:0, kg:0 };
+          feedBreakdown[key].qty += f.qty;
+          feedBreakdown[key].kg  += f.qty*f.kg;
+        });
+      });
+      const dates = matches.map(l=>l.ts).sort();
+      const batch = writeBatch(db);
+      matches.forEach(l=>{
+        const newCages = l.cages.map(c => c === from ? to : c);
+        batch.update(doc(db,'feed_logs',l.firestoreId), { cages: newCages });
+      });
+      await batch.commit();
+      await addDoc(transferLogsRef, {
+        from, to,
+        recordCount: matches.length,
+        totalKg,
+        feedBreakdown,
+        earliestDate: dates[0],
+        latestDate: dates[dates.length-1],
+        transferredAt: serverTimestamp()
+      });
+      showSync(`Transferred ${from} → ${to} ✓`);
+      setTimeout(hideSync, 1500);
+      closeTransferCageModal();
+      toast(`✓ Moved ${matches.length} record(s) from ${from} to ${to}`);
+    } catch(e){
+      console.error(e);
+      err.textContent = e.code === 'permission-denied'
+        ? '⚠ Database rules are blocking this update — ask whoever manages Firebase to allow updates on "feed_logs".'
+        : '⚠ Could not save: ' + (e.message || 'check connection.');
+    }
+  });
+};
+
+window.openAddCageModal = function(){
+  const sel = document.getElementById('ac-section');
+  sel.innerHTML = Object.keys(CAGES).map(s=>`<option value="${s}">Section ${s}</option>`).join('');
+  document.getElementById('ac-err').textContent = '';
+  updateAddCageSuggestion();
+  document.getElementById('add-cage-overlay').classList.remove('hidden');
+};
+window.closeAddCageModal = function(){
+  document.getElementById('add-cage-overlay').classList.add('hidden');
+};
+window.updateAddCageSuggestion = function(){
+  const sec = document.getElementById('ac-section').value;
+  document.getElementById('ac-cageid').value = suggestNextCageId(sec);
+};
+window.confirmAddCage = function(){
+  const err = document.getElementById('ac-err');
+  const sec = document.getElementById('ac-section').value;
+  const cid = document.getElementById('ac-cageid').value.trim();
+  if(!sec){ err.textContent = '⚠ Pick a section.'; return; }
+  if(!cid){ err.textContent = '⚠ Enter a cage ID.'; return; }
+  const allC = Object.values(CAGES).flat();
+  if(allC.includes(cid) || cid === HATCHERY_ID){ err.textContent = `⚠ "${cid}" already exists.`; return; }
+  requirePin(async ()=>{
+    try {
+      const newSections = { ...CAGES, [sec]: [...CAGES[sec], cid] };
+      await updateDoc(cageConfigRef, { sections: newSections });
+      closeAddCageModal();
+      toast(`✓ Added cage ${cid} to Section ${sec}`);
+    } catch(e){
+      console.error(e);
+      err.textContent = e.code === 'permission-denied'
+        ? '⚠ Database rules are blocking this — ask whoever manages Firebase to allow updates on "config".'
+        : '⚠ Could not save: ' + (e.message || 'check connection.');
+    }
+  });
+};
+
+window.openAddSectionModal = function(){
+  document.getElementById('as-section').value = '';
+  document.getElementById('as-cageid').value = '';
+  document.getElementById('as-err').textContent = '';
+  document.getElementById('add-section-overlay').classList.remove('hidden');
+};
+window.closeAddSectionModal = function(){
+  document.getElementById('add-section-overlay').classList.add('hidden');
+};
+window.updateAddSectionSuggestion = function(){
+  const sec = document.getElementById('as-section').value.trim().toUpperCase();
+  document.getElementById('as-cageid').value = sec ? `${sec}1` : '';
+};
+window.confirmAddSection = function(){
+  const err = document.getElementById('as-err');
+  const sec = document.getElementById('as-section').value.trim().toUpperCase();
+  const cid = document.getElementById('as-cageid').value.trim();
+  if(!sec){ err.textContent = '⚠ Enter a section letter/id.'; return; }
+  if(CAGES[sec]){ err.textContent = `⚠ Section ${sec} already exists.`; return; }
+  if(!cid){ err.textContent = '⚠ Enter the first cage ID for this section.'; return; }
+  const allC = Object.values(CAGES).flat();
+  if(allC.includes(cid) || cid === HATCHERY_ID){ err.textContent = `⚠ "${cid}" already exists.`; return; }
+  requirePin(async ()=>{
+    try {
+      const newSections = { ...CAGES, [sec]: [cid] };
+      await updateDoc(cageConfigRef, { sections: newSections });
+      closeAddSectionModal();
+      toast(`✓ Added Section ${sec} with cage ${cid}`);
+    } catch(e){
+      console.error(e);
+      err.textContent = e.code === 'permission-denied'
+        ? '⚠ Database rules are blocking this — ask whoever manages Firebase to allow updates on "config".'
+        : '⚠ Could not save: ' + (e.message || 'check connection.');
+    }
+  });
+};
+
 window.clearCageRecords = function(){
   const cage = document.getElementById('fl-cage').value;
   if(!cage){ toast('⚠ Pick a cage in the filter above first, then Clear Cage Records.'); return; }
@@ -1724,6 +2015,40 @@ window.renderTrash = function(){
       </tr>`;
   }).join('');
 };
+
+window.openTransferHistoryModal = function(){
+  document.getElementById('transfer-history-overlay').classList.remove('hidden');
+  renderTransferHistory();
+};
+window.closeTransferHistoryModal = function(){
+  document.getElementById('transfer-history-overlay').classList.add('hidden');
+};
+
+window.renderTransferHistory = function(){
+  const list  = document.getElementById('transfer-history-list');
+  const empty = document.getElementById('transfer-history-empty');
+  if(!transferLogs.length){ list.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  list.innerHTML = transferLogs.map(t=>{
+    const fmt = (v)=> v ? new Date(v).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';
+    const feedRows = Object.values(t.feedBreakdown||{})
+      .map(f=>`<div class="cage-feed-line"><span class="cage-feed-name">${f.label} ${f.size} ×${f.qty}</span><span class="cage-feed-val">${f.kg.toLocaleString()} kg</span></div>`)
+      .join('');
+    return `
+      <div class="cage-report-card" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="cage-report-id">${t.from} &#8594; ${t.to}</div>
+          <div class="trash-row-meta">${timeAgo(t.transferredAt)}</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+          ${t.recordCount} record(s) · feeding period ${fmt(t.earliestDate)} – ${fmt(t.latestDate)}
+        </div>
+        ${feedRows}
+        <div class="cage-total-line"><span class="lbl">Total moved</span><span class="val">${(t.totalKg||0).toLocaleString()} kg</span></div>
+      </div>`;
+  }).join('');
+};
+
 
 window.restoreLog = function(trashId){
   const entry = deletedLogs.find(l => l.trashId === trashId);
@@ -2881,8 +3206,8 @@ window.renderMonthlyReport = function(){
         <span class="cage-feed-val">${fd.bags % 1 === 0 ? fd.bags : fd.bags.toFixed(1)} bags &nbsp;·&nbsp; ${fd.kg.toLocaleString()} kg</span>
       </div>`).join('');
     return `
-      <div class="cage-report-card sg-${sec}">
-        <div class="cage-report-id sg-${sec}">${cid}</div>
+      <div class="cage-report-card">
+        <div class="cage-report-id" style="color:${getSectionColor(sec)};">${cid}</div>
         ${feedLines}
         <div class="cage-total-line">
           <span class="lbl">Total this month</span>
